@@ -3,12 +3,12 @@
 
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { DEFAULT_LIMIT } from "@/constants";
 import { trpc } from "@/trpc/client";
@@ -64,15 +64,15 @@ const VideosSectionsSuspense = () => {
                   key={video.id}
                   legacyBehavior // Ensures backward compatibility with older Next.js versions
                 >
+                  {/* Table cells currently display placeholder text instead of actual data */}
                   <TableRow className="cursor-pointer">
-                    {/* Table cells currently display placeholder text instead of actual data */}
                     <TableCell>{video.title}</TableCell>
-                    <TableCell>visibility</TableCell> {/* Should use video.visibility */}
-                    <TableCell>status</TableCell> {/* Should use video.status */}
-                    <TableCell>date</TableCell> {/* Should use video.createdAt */}
-                    <TableCell>views</TableCell> {/* Should use video.views */}
-                    <TableCell>comments</TableCell> {/* Should use video.comments */}
-                    <TableCell>likes</TableCell> {/* Should use video.likes */}
+                    <TableCell>visibility</TableCell>
+                    <TableCell>status</TableCell>
+                    <TableCell>date</TableCell>
+                    <TableCell>views</TableCell>
+                    <TableCell>comments</TableCell>
+                    <TableCell>likes</TableCell>
                   </TableRow>
                 </Link>
               ))}
