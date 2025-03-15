@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Enables client-side rendering
 
 import {
   SidebarGroup,
@@ -6,10 +6,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { useAuth, useClerk } from "@clerk/nextjs";
-import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react";
-import Link from "next/link";
+} from "@/components/ui/sidebar"; // Sidebar UI components
+import { useAuth, useClerk } from "@clerk/nextjs"; // Authentication hooks from Clerk
+import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react"; // Icons
+import Link from "next/link"; // Next.js link component
+
+// Main navigation items
 const items = [
   {
     title: "Home",
@@ -20,7 +22,7 @@ const items = [
     title: "Subscriptions",
     url: "/feed/subscriptions",
     icon: PlaySquareIcon,
-    auth: true,
+    auth: true, // Requires authentication
   },
   {
     title: "Trending",
@@ -29,9 +31,11 @@ const items = [
   },
 ];
 
+// Main navigation section inside the sidebar
 export const MainSection = () => {
   const clerk = useClerk();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useAuth(); // Check if the user is signed in
+
   return (
     <SidebarGroup>
       <SidebarGroupContent>
@@ -41,11 +45,11 @@ export const MainSection = () => {
               <SidebarMenuButton
                 tooltip={item.title}
                 asChild
-                isActive={false} //TODO: Change to look current pathname
+                isActive={false} // TODO: Update logic to check the current pathname
                 onClick={(e) => {
                   if (!isSignedIn && item.auth) {
                     e.preventDefault();
-                    return clerk.openSignIn();
+                    return clerk.openSignIn(); // Prompt sign-in if required
                   }
                 }}
               >

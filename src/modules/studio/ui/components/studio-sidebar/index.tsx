@@ -14,19 +14,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StudioSidebarHeader } from "./studio-sidebar-header";
 
+// Sidebar component for the Studio page
 export const StudioSidebar = () => {
-  const pathname = usePathname();
+  const pathname = usePathname(); // Get the current route path
 
   return (
-    <Sidebar className="pt-16 z-40 " collapsible="icon">
+    // Sidebar with styling and collapsible functionality
+    <Sidebar className="pt-16 z-40" collapsible="icon">
       <SidebarContent className="bg-background">
         <SidebarGroup>
           <SidebarMenu>
-            <StudioSidebarHeader />
+            <StudioSidebarHeader /> {/* Custom header component */}
+            {/* Content section */}
             <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={pathname === "/studio"}
-                tooltip={"Content"}
+                isActive={pathname === "/studio"} // Highlights active section
+                tooltip={"Content"} // Tooltip for accessibility
                 asChild
               >
                 <Link href={"/studio"}>
@@ -35,7 +38,8 @@ export const StudioSidebar = () => {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <Separator />
+            <Separator /> {/* Visual separator */}
+            {/* Exit studio button */}
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={"Exit studio"} asChild>
                 <Link href={"/"}>

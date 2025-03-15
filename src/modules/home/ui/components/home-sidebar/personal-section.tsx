@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Enables client-side rendering
 
 import {
   SidebarGroup,
@@ -7,37 +7,41 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { useAuth, useClerk } from "@clerk/nextjs";
-import { HistoryIcon, ListVideoIcon, ThumbsUpIcon } from "lucide-react";
-import Link from "next/link";
+} from "@/components/ui/sidebar"; // Sidebar UI components
+import { useAuth, useClerk } from "@clerk/nextjs"; // Authentication hooks from Clerk
+import { HistoryIcon, ListVideoIcon, ThumbsUpIcon } from "lucide-react"; // Icons
+import Link from "next/link"; // Next.js link component
+
+// Personal navigation items (requires authentication)
 const items = [
   {
     title: "History",
     url: "/playlists/history",
     icon: HistoryIcon,
-    auth: true,
+    auth: true, // Requires authentication
   },
   {
     title: "Liked videos",
     url: "/playlists/liked",
     icon: ThumbsUpIcon,
-    auth: true,
+    auth: true, // Requires authentication
   },
   {
     title: "All playlists",
     url: "/playlists",
     icon: ListVideoIcon,
-    auth: true,
+    auth: true, // Requires authentication
   },
 ];
 
+// Personal section inside the sidebar (includes user-specific navigation)
 export const PersonalSection = () => {
   const clerk = useClerk();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useAuth(); // Check if the user is signed in
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>You</SidebarGroupLabel>
+      <SidebarGroupLabel>You</SidebarGroupLabel> {/* Section title */}
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (
@@ -45,11 +49,11 @@ export const PersonalSection = () => {
               <SidebarMenuButton
                 tooltip={item.title}
                 asChild
-                isActive={false} //TODO: Change to look current pathname
+                isActive={false} // TODO: Update logic to check the current pathname
                 onClick={(e) => {
                   if (!isSignedIn && item.auth) {
                     e.preventDefault();
-                    return clerk.openSignIn();
+                    return clerk.openSignIn(); // Prompt sign-in if required
                   }
                 }}
               >

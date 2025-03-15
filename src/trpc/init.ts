@@ -6,37 +6,36 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 import superjson from "superjson";
+
+// Create TRPC context with authentication information
 export const createTRPCContext = cache(async () => {
-  const { userId } = await auth();
-  return { clerkUserId: userId };
+  const { userId } = await auth(); // Get the authenticated user's ID from Clerk
+  return { clerkUserId: userId }; // Return context with the Clerk user ID
 });
 
-export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
+export type Context = Awaited<ReturnType<typeof createTRPCContext>>; // Define the TRPC context type
 
-// Avoid exporting the entire t-object
-// since it's not very descriptive.
-// For instance, the use of a t variable
-// is common in i18n libraries.
+// Initialize TRPC with context
 const t = initTRPC.context<Context>().create({
-  /**
-   * @see https://trpc.io/docs/server/data-transformers
-   */
-  transformer: superjson,
+  transformer: superjson, // Enable data transformation with SuperJSON
 });
-// Base router and procedure helpers
-export const createTRPCRouter = t.router;
-export const createCallerFactory = t.createCallerFactory;
-export const baseProcedure = t.procedure;
 
+// Base router and procedure helpers
+export const createTRPCRouter = t.router; // Create a TRPC router
+export const createCallerFactory = t.createCallerFactory; // Factory for TRPC caller
+export const baseProcedure = t.procedure; // Base procedure for TRPC operations
+
+// Protected procedure middleware to enforce authentication
 export const protectedProcedure = t.procedure.use(async function isAuthed(
   opts
 ) {
   const { ctx } = opts;
 
   if (!ctx.clerkUserId) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "UNAUTHORIZED" }); // Reject if user is not authenticated
   }
 
+  // Fetch user from the database using Clerk ID
   const [user] = await db
     .select()
     .from(users)
@@ -44,16 +43,17 @@ export const protectedProcedure = t.procedure.use(async function isAuthed(
     .limit(1);
 
   if (!user) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "UNAUTHORIZED" }); // Reject if user not found in the database
   }
 
+  // Apply rate limiting based on user ID
   const { success } = await ratelimit.limit(user.id);
 
   if (!success) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS" }); // Reject if rate limit is exceeded
   }
 
   return opts.next({
-    ctx: { ...ctx, user },
+    ctx: { ...ctx, user }, // Pass user data into the request context
   });
 });

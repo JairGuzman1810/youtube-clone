@@ -1,5 +1,6 @@
 "use client";
-// ^-- to make sure we can mount the Provider from a server component
+// Ensures this file runs in a client component
+
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
@@ -9,49 +10,66 @@ import superjson from "superjson";
 import { makeQueryClient } from "./query-client";
 import type { AppRouter } from "./routers/_app";
 
+// Create TRPC instance for React Query
 export const trpc = createTRPCReact<AppRouter>();
+
 let clientQueryClientSingleton: QueryClient;
+
+/**
+ * Retrieves a QueryClient instance.
+ * - On the server: Creates a new instance for each request.
+ * - On the client: Uses a singleton to persist cache across renders.
+ */
 function getQueryClient() {
   if (typeof window === "undefined") {
-    // Server: always make a new query client
-    return makeQueryClient();
+    return makeQueryClient(); // Always create a new query client on the server
   }
-  // Browser: use singleton pattern to keep the same query client
-  return (clientQueryClientSingleton ??= makeQueryClient());
+  return (clientQueryClientSingleton ??= makeQueryClient()); // Use a singleton in the browser
 }
+
+/**
+ * Constructs the TRPC API URL dynamically.
+ * - Uses `window` for client-side requests.
+ * - Uses environment variables for server-side requests.
+ */
 function getUrl() {
   const base = (() => {
-    if (typeof window !== "undefined") return "";
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    return "http://localhost:3000";
+    if (typeof window !== "undefined") return ""; // Use relative URL in browser
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // Use Vercel deployment URL
+    return "http://localhost:3000"; // Fallback for local development
   })();
-  return `${base}/api/trpc`;
+  return `${base}/api/trpc`; // Append TRPC endpoint
 }
+
+/**
+ * TRPCProvider component that wraps the application with TRPC and React Query providers.
+ * Ensures proper query management and API communication.
+ */
 export function TRPCProvider(
   props: Readonly<{
     children: React.ReactNode;
   }>
 ) {
-  // NOTE: Avoid useState when initializing the query client if you don't
-  //       have a suspense boundary between this and the code that may
-  //       suspend because React will throw away the client on the initial
-  //       render if it suspends and there is no boundary
+  // Initialize Query Client (avoid useState unless necessary to prevent resets)
   const queryClient = getQueryClient();
+
+  // Create TRPC client (memoized with useState to prevent re-creation)
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
-          transformer: superjson,
-          url: getUrl(),
+          transformer: superjson, // Enable SuperJSON for data serialization
+          url: getUrl(), // Set TRPC API URL
           async headers() {
             const headers = new Headers();
-            headers.set("x-trpc-source", "nextjs-react");
+            headers.set("x-trpc-source", "nextjs-react"); // Custom header to track requests
             return headers;
           },
         }),
       ],
     })
   );
+
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>

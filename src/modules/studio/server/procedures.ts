@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { videos } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { and, desc, eq, gt, or } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import z from "zod";
 
 // Define the TRPC router for the studio-related API endpoints
@@ -31,10 +31,10 @@ export const studioRouter = createTRPCRouter({
             eq(videos.userId, userId), // Filter videos by user ID
             cursor
               ? or(
-                  gt(videos.updatedAt, cursor.updatedAt), // Get newer videos
+                  lt(videos.updatedAt, cursor.updatedAt), // Get newer videos
                   and(
                     eq(videos.updatedAt, cursor.updatedAt), // If same timestamp, use ID as tiebreaker
-                    gt(videos.id, cursor.id)
+                    lt(videos.id, cursor.id)
                   )
                 )
               : undefined // If no cursor, fetch the most recent videos
