@@ -1,5 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
+  integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -49,27 +51,45 @@ export const categoryRelations = relations(categories, ({ many }) => ({
   videos: many(videos), // One category can have many videos
 }));
 
+// Enum type to define video visibility options
+export const videoVisibility = pgEnum("video_visibility", [
+  "private",
+  "public",
+]);
+
 // ========================
 // VIDEOS TABLE DEFINITION
 // ========================
 export const videos = pgTable("videos", {
-  id: uuid("id").primaryKey().defaultRandom(), // Primary key with a random UUID
-  title: text("title").notNull(), // Video title
-  description: text("description"), // Video description
-  muxStatus: text("mux_status"), // Status of the video on Mux (e.g., waiting)
-  muxAssetId: text("mux_asset_id").unique(), // Unique Mux asset ID for the video
-  muxUploadId: text("mux_upload_id").unique(), // Unique Mux upload ID associated with the video
-  muxPlaybackId: text("mux_playback_id").unique(), // Unique Mux playback ID for streaming the video
-  muxTrackId: text("mux_track_id").unique(), // Unique ID for the Mux track (e.g., subtitles or alternate audio)
-  muxTrackStatus: text("mux_track_status"), // Status of the Mux track
+  id: uuid("id").primaryKey().defaultRandom(), // Unique video identifier (UUID)
+
+  title: text("title").notNull(), // Video title (required)
+  description: text("description"), // Optional video description
+
+  muxStatus: text("mux_status"), // Status of the video on Mux (e.g., "waiting", "ready", "errored")
+  muxAssetId: text("mux_asset_id").unique(), // Unique Mux asset ID, used to manage videos on Mux
+  muxUploadId: text("mux_upload_id").unique(), // Unique Mux upload ID, associated with the video upload process
+  muxPlaybackId: text("mux_playback_id").unique(), // Unique Mux playback ID for streaming access
+  muxTrackId: text("mux_track_id").unique(), // Unique Mux track ID (e.g., for subtitles or alternate audio tracks)
+  muxTrackStatus: text("mux_track_status"), // Status of the associated Mux track
+
+  thumbnailUrl: text("thumbnail_url"), // URL of the video's thumbnail image
+  previewUrl: text("preview_url"), // URL for a short preview animation (e.g., GIF)
+
+  duration: integer("duration").default(0).notNull(), // Video duration in milliseconds (default is 0)
+
+  visibility: videoVisibility("visibility").default("private").notNull(), // Video visibility (default: private)
+
   userId: uuid("user_id")
-    .references(() => users.id, { onDelete: "cascade" }) // Foreign key: if user is deleted, delete their videos
+    .references(() => users.id, { onDelete: "cascade" }) // Links video to user; deletes videos if user is removed
     .notNull(),
+
   categoryId: uuid("category_id").references(() => categories.id, {
-    onDelete: "set null", // If category is deleted, keep videos but set category to null
+    onDelete: "set null", // If category is deleted, video remains but category is set to null
   }),
-  createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when video is created
-  updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when video is updated
+
+  createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the video is created
+  updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the video is last updated
 });
 
 // Define relationships for videos

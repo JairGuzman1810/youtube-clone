@@ -60,7 +60,7 @@ export const StudioUploader = ({
           className="text-sm"
           type="percentage" // Show upload progress as percentage
         />
-        <MuxUploaderProgress muxUploader={UPLOADER_ID} type="bar" />{" "}
+        <MuxUploaderProgress muxUploader={UPLOADER_ID} type="bar" />
         {/* Show upload progress as a bar */}
       </MuxUploaderDrop>
     </div>
