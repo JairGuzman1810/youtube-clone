@@ -1,5 +1,6 @@
 import { formatDuration } from "@/lib/utils";
 import Image from "next/image";
+import { THUMBNAIL_FALLBACK } from "../../constants";
 
 // Define the props interface for the VideoThumbnail component
 interface VideoThumbnailProps {
@@ -22,7 +23,7 @@ export const VideoThumbnail = ({
       <div className="relative w-full overflow-hidden rounded-xl aspect-video">
         {/* Static thumbnail image */}
         <Image
-          src={imageUrl ?? "/placeholder.svg"} // Fallback to placeholder if no image is provided
+          src={imageUrl || THUMBNAIL_FALLBACK} // Fallback to placeholder if no image is provided
           alt={title} // Accessibility: Describe the image using the video title
           fill
           className="size-full object-cover group-hover:opacity-0" // Hides on hover to reveal preview
@@ -30,7 +31,7 @@ export const VideoThumbnail = ({
         {/* Animated preview image (visible on hover) */}
         <Image
           unoptimized={!!previewUrl} // Avoids Next.js optimization for dynamic preview URLs
-          src={previewUrl ?? "/placeholder.svg"} // Fallback image if preview is unavailable
+          src={previewUrl || THUMBNAIL_FALLBACK} // Fallback image if preview is unavailable
           alt={title}
           fill
           className="size-full object-cover opacity-0 group-hover:opacity-100" // Visible only on hover

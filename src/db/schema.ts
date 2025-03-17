@@ -78,8 +78,10 @@ export const videos = pgTable("videos", {
   muxTrackId: text("mux_track_id").unique(), // Unique Mux track ID (e.g., for subtitles or alternate audio tracks)
   muxTrackStatus: text("mux_track_status"), // Status of the associated Mux track
 
-  thumbnailUrl: text("thumbnail_url"), // URL of the video's thumbnail image
-  previewUrl: text("preview_url"), // URL for a short preview animation (e.g., GIF)
+  thumbnailKey: text("thumbnail_key"), // UploadThing file identifier for the stored thumbnail image
+  thumbnailUrl: text("thumbnail_url"), // Public URL of the video's thumbnail image
+  previewKey: text("preview_key"), // UploadThing file identifier for the stored preview animation
+  previewUrl: text("preview_url"), // Public URL for a short preview animation (e.g., GIF)
 
   duration: integer("duration").default(0).notNull(), // Video duration in milliseconds (default is 0)
 

@@ -10,6 +10,7 @@ import {
 } from "@mux/mux-node/resources/webhooks";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { UTApi } from "uploadthing/server";
 
 const SIGNING_SECRET = process.env.MUX_WEBHOOK_SECRET; // Retrieves the Mux webhook secret from environment variables
 
@@ -33,19 +34,17 @@ export const POST = async (request: Request) => {
   const payload = await request.json(); // Parse the incoming JSON payload
   const body = JSON.stringify(payload); // Convert the payload to a string for signature verification
 
-  // Verifies the webhook signature to ensure the request is legitimate
+  // Verify the webhook signature to ensure the request is legitimate
   mux.webhooks.verifySignature(
     body,
-    {
-      "mux-signature": muxSignature,
-    },
+    { "mux-signature": muxSignature },
     SIGNING_SECRET
   );
 
   // Process the webhook event based on its type
   switch (payload.type as WebhookEvent["type"]) {
     case "video.asset.created": {
-      // Event when a new video asset is created in Mux
+      // Handle event when a new video asset is created in Mux
       const data = payload.data as VideoAssetCreatedWebhookEvent["data"];
 
       if (!data.upload_id) {
@@ -62,43 +61,64 @@ export const POST = async (request: Request) => {
     }
 
     case "video.asset.ready": {
-      // Event when a video asset is fully processed and ready for playback
+      // Handle event when a video asset is fully processed and ready to stream
       const data = payload.data as VideoAssetReadyWebhookEvent["data"];
-      const playbackId = data.playback_ids?.[0]?.id;
 
-      if (!data.upload_id) {
+      // Extract the playback ID from the Mux webhook data
+      const playbackId = data.playback_ids?.[0].id;
+
+      // Ensure the upload ID is present in the webhook data
+      if (!data.upload_id)
         return new Response("No upload ID found", { status: 400 });
-      }
 
-      if (!playbackId) {
+      // Ensure a playback ID exists before proceeding
+      if (!playbackId)
         return new Response("Missing playback ID", { status: 400 });
-      }
 
-      // Generate URLs for video thumbnail and preview animation
-      const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
-      const previewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
+      // Construct temporary URLs for the video thumbnail and animated preview
+      const tempThumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+      const tempPreviewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
 
-      // Convert video duration to milliseconds
+      // Convert the video duration from seconds to milliseconds (if available)
       const duration = data.duration ? Math.round(data.duration * 1000) : 0;
 
-      // Update the database with the ready video asset details
+      // Initialize the UploadThing API instance
+      const utapi = new UTApi();
+
+      // Upload the generated thumbnail and preview images from Mux to UploadThing
+      const [uploadedThumbnail, uploadedPreview] =
+        await utapi.uploadFilesFromUrl([tempThumbnailUrl, tempPreviewUrl]);
+
+      // Ensure both thumbnail and preview were successfully uploaded
+      if (!uploadedThumbnail.data || !uploadedPreview.data)
+        return new Response("Failed to upload thumbnail or preview", {
+          status: 500,
+        });
+
+      // Extract the file keys and URLs from the uploaded assets
+      const { key: thumbnailKey, url: thumbnailUrl } = uploadedThumbnail.data;
+      const { key: previewKey, url: previewUrl } = uploadedPreview.data;
+
+      // Update the video record in the database with Mux playback details, thumbnail, preview, and duration
       await db
         .update(videos)
         .set({
-          muxStatus: data.status,
-          muxPlaybackId: playbackId,
-          muxAssetId: data.id,
-          thumbnailUrl,
-          previewUrl,
-          duration,
+          muxStatus: data.status, // Update the video processing status
+          muxPlaybackId: playbackId, // Store the playback ID for streaming
+          muxAssetId: data.id, // Store the Mux asset ID
+          thumbnailUrl, // Save the new thumbnail URL
+          thumbnailKey, // Save the UploadThing key for the thumbnail
+          previewUrl, // Save the preview animation URL
+          previewKey, // Save the UploadThing key for the preview
+          duration, // Store the processed video duration
         })
-        .where(eq(videos.muxUploadId, data.upload_id));
+        .where(eq(videos.muxUploadId, data.upload_id)); // Match the record using the original upload ID
 
       break;
     }
 
     case "video.asset.errored": {
-      // Event when an error occurs while processing a video asset
+      // Handle event when an error occurs during video processing
       const data = payload.data as VideoAssetErroredWebhookEvent["data"];
 
       if (!data.upload_id) {
@@ -115,7 +135,7 @@ export const POST = async (request: Request) => {
     }
 
     case "video.asset.deleted": {
-      // Event when a video asset is deleted from Mux
+      // Handle event when a video asset is deleted from Mux
       const data = payload.data as VideoAssetDeletedWebhookEvent["data"];
 
       if (!data.upload_id) {
@@ -129,12 +149,11 @@ export const POST = async (request: Request) => {
     }
 
     case "video.asset.track.ready": {
-      // Event when an additional track (e.g., subtitles) is ready for a video asset
+      // Handle event when an additional track (e.g., subtitles) is ready for a video asset
       const data = payload.data as VideoAssetTrackReadyWebhookEvent["data"] & {
         asset_id: string;
       };
 
-      // TypeScript may incorrectly assume that `asset_id` does not exist
       const assetId = data.asset_id;
       const trackId = data.id;
       const status = data.status;

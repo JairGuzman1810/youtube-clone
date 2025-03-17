@@ -4,10 +4,68 @@ import { mux } from "@/lib/mux";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
+import { UTApi } from "uploadthing/server";
 import { z } from "zod";
 
 // Define the TRPC router for handling video-related API endpoints
 export const videosRouter = createTRPCRouter({
+  // Restore the video's thumbnail using the Mux thumbnail
+  restoreThumbnail: protectedProcedure
+    .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user; // Retrieve the authenticated user's ID
+
+      // Fetch the existing video that belongs to the user
+      const [existingVideo] = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)));
+
+      if (!existingVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Throw error if video is not found or unauthorized
+      }
+
+      // Delete existing thumbnail from UploadThing if available
+      if (existingVideo.thumbnailKey) {
+        const utapi = new UTApi();
+
+        await utapi.deleteFiles(existingVideo.thumbnailKey); // Remove the file from UploadThing storage
+
+        // Remove thumbnail references from the database
+        await db
+          .update(videos)
+          .set({ thumbnailKey: null, thumbnailUrl: null }) // Clear stored thumbnail data
+          .where(and(eq(videos.id, input.id), eq(videos.userId, userId)));
+      }
+
+      if (!existingVideo.muxPlaybackId) {
+        throw new TRPCError({ code: "BAD_REQUEST" }); // Ensure the video has a valid Mux playback ID
+      }
+
+      const utapi = new UTApi();
+
+      // Generate a temporary URL for the video thumbnail from Mux
+      const tempThumbnailUrl = `https://image.mux.com/${existingVideo.muxPlaybackId}/thumbnail.jpg`;
+
+      // Upload the Mux-generated thumbnail to UploadThing
+      const uploadedThumbnail = await utapi.uploadFilesFromUrl(
+        tempThumbnailUrl
+      );
+
+      if (!uploadedThumbnail.data)
+        return new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); // Handle upload failure
+
+      const { key: thumbnailKey, url: thumbnailUrl } = uploadedThumbnail.data; // Extract the new thumbnail key and URL
+
+      // Update the database with the new thumbnail details
+      const [updatedVideo] = await db
+        .update(videos)
+        .set({ thumbnailUrl, thumbnailKey }) // Store the new thumbnail in the database
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
+        .returning();
+
+      return updatedVideo; // Return the updated video record with the new thumbnail
+    }),
   // Remove a video from the database
   remove: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID

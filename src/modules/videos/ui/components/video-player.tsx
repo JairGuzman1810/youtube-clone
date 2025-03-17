@@ -1,6 +1,7 @@
 "use client"; // Indicates this component runs on the client side
 
 import MuxPlayer from "@mux/mux-player-react";
+import { THUMBNAIL_FALLBACK } from "../../constants";
 
 // Props definition for the VideoPlayer component
 interface VideoPlayerProps {
@@ -20,11 +21,11 @@ export const VideoPlayer = ({
   return (
     <MuxPlayer
       playbackId={playbackId || ""} // Provide a fallback empty string if playbackId is undefined
-      poster={thumbnailUrl || "/placeholder.svg"} // Default poster image if no thumbnail is provided
+      poster={thumbnailUrl || THUMBNAIL_FALLBACK} // Default poster image if no thumbnail is provided
       playerInitTime={0} // Initialize the player at the start of the video
       autoPlay={autoPlay} // Set autoplay behavior based on the provided prop
       thumbnailTime={0} // Set thumbnail display time at the beginning of the video
-      className="size-full object-contain"
+      className="w-full h-full object-cover"
       accentColor="#FF2056" // Set the player’s accent color
       onPlay={onPlay} // Attach the play event callback function
     />
