@@ -8,6 +8,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-zod";
 
 // ========================
 // USERS TABLE DEFINITION
@@ -91,6 +96,11 @@ export const videos = pgTable("videos", {
   createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the video is created
   updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the video is last updated
 });
+
+// Schemas for video operations
+export const videoInsertSchema = createInsertSchema(videos); // Schema for inserting a new video
+export const videoUpdateSchema = createUpdateSchema(videos); // Schema for updating an existing video
+export const videosSelectSchema = createSelectSchema(videos); // Schema for selecting video data
 
 // Define relationships for videos
 export const videoRelations = relations(videos, ({ one }) => ({
