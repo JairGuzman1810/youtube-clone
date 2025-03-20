@@ -34,6 +34,7 @@ import {
   CopyIcon,
   Globe2Icon,
   ImagePlusIcon,
+  Loader2Icon,
   LockIcon,
   MoreVerticalIcon,
   RotateCcwIcon,
@@ -121,6 +122,47 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
     },
   });
 
+  const generateThumbnail = trpc.videos.generateThumbnail.useMutation({
+    onSuccess: () => {
+      toast.success("Background job started", {
+        description: (
+          <span className="text-gray-500">This may take some time</span>
+        ),
+      }); // Show success message
+    },
+    onError: () => {
+      toast.error("Something went wrong"); // Show error message on failure
+    },
+  });
+
+  // Mutation hook for generating a video description using AI
+  const generateDescription = trpc.videos.generateDescription.useMutation({
+    onSuccess: () => {
+      toast.success("Background job started", {
+        description: (
+          <span className="text-gray-500">This may take some time</span>
+        ),
+      }); // Show success message
+    },
+    onError: () => {
+      toast.error("Something went wrong"); // Show error message on failure
+    },
+  });
+
+  // Mutation hook for generating an SEO-friendly video title using AI
+  const generateTitle = trpc.videos.generateTitle.useMutation({
+    onSuccess: () => {
+      toast.success("Background job started", {
+        description: (
+          <span className="text-gray-500">This may take some time</span>
+        ),
+      }); // Show success message
+    },
+    onError: () => {
+      toast.error("Something went wrong"); // Show error message on failure
+    },
+  });
+
   // Form handling setup
   const form = useForm<z.infer<typeof videoUpdateSchema>>({
     resolver: zodResolver(videoUpdateSchema), // Use Zod schema validation
@@ -202,8 +244,26 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Title
-                      {/* TODO: ADD AI Generate button */}
+                      <div className="flex items-center gap-x-2">
+                        Title
+                        {/* Button to generate an AI-powered video title */}
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          type="button"
+                          className="rounded-full size-6 [&_svg]:size-3"
+                          onClick={() => generateTitle.mutate({ id: videoId })}
+                          disabled={
+                            generateTitle.isPending || !video.muxTrackId
+                          }
+                        >
+                          {generateTitle.isPending ? (
+                            <Loader2Icon className="animate-spin" />
+                          ) : (
+                            <SparklesIcon />
+                          )}
+                        </Button>
+                      </div>
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -222,8 +282,28 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Description
-                      {/* TODO: ADD AI Generate button */}
+                      <div className="flex items-center gap-x-2">
+                        Description
+                        {/* Button to generate an AI-powered video description */}
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          type="button"
+                          className="rounded-full size-6 [&_svg]:size-3"
+                          onClick={() =>
+                            generateDescription.mutate({ id: videoId })
+                          }
+                          disabled={
+                            generateDescription.isPending || !video.muxTrackId
+                          }
+                        >
+                          {generateDescription.isPending ? (
+                            <Loader2Icon className="animate-spin" />
+                          ) : (
+                            <SparklesIcon />
+                          )}
+                        </Button>
+                      </div>
                     </FormLabel>
                     <FormControl>
                       <Textarea
@@ -273,7 +353,11 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                               Change
                             </DropdownMenuItem>
                             {/* AI-Generated Thumbnail Option */}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                generateThumbnail.mutate({ id: videoId })
+                              }
+                            >
                               <SparklesIcon className="size-4 mr-1" />
                               AI-generated
                             </DropdownMenuItem>
