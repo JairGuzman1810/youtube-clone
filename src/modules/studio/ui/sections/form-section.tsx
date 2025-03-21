@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { videoUpdateSchema } from "@/db/schema";
 import { snakeCaseToTitle } from "@/lib/utils";
@@ -70,9 +71,58 @@ export const FormSection = ({ videoId }: FormSectionProps) => {
 // Skeleton loader for form section
 const FormSectionSkeleton = () => {
   return (
-    <div>
-      <div>Loading...</div>
-    </div>
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <Skeleton className="h-9 w-24" />
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="space-y-8 lg:col-span-3">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-[220px] w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-[84px] w-[153px]" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-y-8 lg:col-span-2">
+          <div className="flex flex-col gap-4 overflow-hidden rounded-xl bg-[#f9f9f9]">
+            <Skeleton className="aspect-video" />
+            <div className="space-y-6 p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-5 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -116,19 +166,6 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
       utils.studio.getMany.invalidate(); // Refresh studio videos list
       utils.studio.getOne.invalidate({ id: videoId }); // Refresh single video details
       toast.success("Thumbnail restored"); // Show success message
-    },
-    onError: () => {
-      toast.error("Something went wrong"); // Show error message on failure
-    },
-  });
-
-  const generateThumbnail = trpc.videos.generateThumbnail.useMutation({
-    onSuccess: () => {
-      toast.success("Background job started", {
-        description: (
-          <span className="text-gray-500">This may take some time</span>
-        ),
-      }); // Show success message
     },
     onError: () => {
       toast.error("Something went wrong"); // Show error message on failure
@@ -211,7 +248,10 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
               </h1>
             </div>
             <div className="flex items-center gap-x-2">
-              <Button type="submit" disabled={update.isPending}>
+              <Button
+                type="submit"
+                disabled={update.isPending || !form.formState.isDirty}
+              >
                 Save
               </Button>
               {/* Dropdown menu for additional actions */}
@@ -351,15 +391,6 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                             >
                               <ImagePlusIcon className="size-4 mr-1" />
                               Change
-                            </DropdownMenuItem>
-                            {/* AI-Generated Thumbnail Option */}
-                            <DropdownMenuItem
-                              onClick={() =>
-                                generateThumbnail.mutate({ id: videoId })
-                              }
-                            >
-                              <SparklesIcon className="size-4 mr-1" />
-                              AI-generated
                             </DropdownMenuItem>
                             {/* Restore Default Thumbnail Option */}
                             <DropdownMenuItem
