@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc/client";
+import { useAuth } from "@clerk/nextjs";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { VideoBanner } from "../components/video-banner";
@@ -26,7 +27,25 @@ export const VideoSection = ({ videoId }: VideoSectionProps) => {
 
 // VideoSectionSuspense component - Fetches video data and renders the video player
 const VideoSectionSuspense = ({ videoId }: VideoSectionProps) => {
+  const { isSignedIn } = useAuth(); // Check if the user is signed in
+  const utils = trpc.useUtils(); // Utility functions for cache invalidation
+
+  // Fetch video details using suspense query
   const [video] = trpc.videos.getOne.useSuspenseQuery({ id: videoId });
+
+  // Mutation to create a video view when the video is played
+  const createView = trpc.videoViews.create.useMutation({
+    onSuccess: () => {
+      utils.videos.getOne.invalidate({ id: videoId }); // Invalidate cache to update view count
+    },
+  });
+
+  // Registers a new view if the user is signed in
+  const handlePlay = () => {
+    if (!isSignedIn) return;
+
+    createView.mutate({ videoId }); // Send request to create a new video view
+  };
 
   return (
     <>
@@ -40,7 +59,7 @@ const VideoSectionSuspense = ({ videoId }: VideoSectionProps) => {
         {/* Video Player */}
         <VideoPlayer
           autoPlay
-          onPlay={() => {}}
+          onPlay={handlePlay} // Trigger view creation on play
           playbackId={video.muxPlaybackId}
           thumbnailUrl={video.thumbnailUrl}
         />

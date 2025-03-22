@@ -3,6 +3,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -34,6 +35,7 @@ export const users = pgTable(
 // Define relationships for users
 export const userRelations = relations(users, ({ many }) => ({
   videos: many(videos), // One user can have many videos
+  videoViews: many(videoViews), // One user can have many video views
 }));
 
 // ========================
@@ -105,7 +107,7 @@ export const videoUpdateSchema = createUpdateSchema(videos); // Schema for updat
 export const videosSelectSchema = createSelectSchema(videos); // Schema for selecting video data
 
 // Define relationships for videos
-export const videoRelations = relations(videos, ({ one }) => ({
+export const videoRelations = relations(videos, ({ one, many }) => ({
   user: one(users, {
     fields: [videos.userId], // Foreign key field in "videos"
     references: [users.id], // References "users.id"
@@ -114,4 +116,44 @@ export const videoRelations = relations(videos, ({ one }) => ({
     fields: [videos.categoryId], // Foreign key field in "videos"
     references: [categories.id], // References "categories.id"
   }),
+  views: many(videoViews), // A video can have multiple views
 }));
+
+// ========================
+// VIDEO VIEWS TABLE DEFINITION
+// ========================
+export const videoViews = pgTable(
+  "video_views", // Table name: "video_views"
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Links view to user; deletes views if user is removed
+      .notNull(),
+
+    videoId: uuid("video_id")
+      .references(() => videos.id, { onDelete: "cascade" }) // Links view to video; deletes views if video is removed
+      .notNull(),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the view is created
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the view is updated
+  },
+  (t) => [
+    primaryKey({ name: "video_views_pk", columns: [t.userId, t.videoId] }), // Composite primary key (userId, videoId)
+  ]
+);
+
+// Define relationships for video views
+export const videoReactionRelations = relations(videoViews, ({ one }) => ({
+  user: one(users, {
+    fields: [videoViews.userId], // Foreign key field in "video_views"
+    references: [users.id], // References "users.id"
+  }),
+  video: one(videos, {
+    fields: [videoViews.videoId], // Foreign key field in "video_views"
+    references: [videos.id], // References "videos.id"
+  }),
+}));
+
+// Schemas for video view operations
+export const videoViewSelectSchema = createSelectSchema(videoViews); // Schema for selecting video view data
+export const videoViewInsertSchema = createInsertSchema(videoViews); // Schema for inserting a new video view
+export const videoViewUpdateSchema = createUpdateSchema(videoViews); // Schema for updating an existing video view

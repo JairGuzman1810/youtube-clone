@@ -17,15 +17,15 @@ export const VideoTopRow = ({ video }: VideoTopRowProps) => {
   const compactViews = useMemo(() => {
     return Intl.NumberFormat("en", {
       notation: "compact",
-    }).format(1000);
-  }, []);
+    }).format(video.viewCount);
+  }, [video.viewCount]);
 
   // Formats the number of views in a standard notation (e.g., 1,000)
   const expandedViews = useMemo(() => {
     return Intl.NumberFormat("en", {
       notation: "standard",
-    }).format(1000);
-  }, []);
+    }).format(video.viewCount);
+  }, [video.viewCount]);
 
   // Computes a relative timestamp for when the video was uploaded (e.g., "2 days ago")
   const compactDate = useMemo(() => {
