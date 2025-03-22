@@ -36,6 +36,7 @@ export const users = pgTable(
 export const userRelations = relations(users, ({ many }) => ({
   videos: many(videos), // One user can have many videos
   videoViews: many(videoViews), // One user can have many video views
+  videoReactions: many(videoReactions), // One user can have many video reactions (likes/dislikes)
 }));
 
 // ========================
@@ -117,6 +118,7 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
     references: [categories.id], // References "categories.id"
   }),
   views: many(videoViews), // A video can have multiple views
+  reactions: many(videoReactions), // A video can have multiple reactions
 }));
 
 // ========================
@@ -128,11 +130,9 @@ export const videoViews = pgTable(
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" }) // Links view to user; deletes views if user is removed
       .notNull(),
-
     videoId: uuid("video_id")
       .references(() => videos.id, { onDelete: "cascade" }) // Links view to video; deletes views if video is removed
       .notNull(),
-
     createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the view is created
     updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the view is updated
   },
@@ -142,7 +142,7 @@ export const videoViews = pgTable(
 );
 
 // Define relationships for video views
-export const videoReactionRelations = relations(videoViews, ({ one }) => ({
+export const videoViewsRelations = relations(videoViews, ({ one }) => ({
   user: one(users, {
     fields: [videoViews.userId], // Foreign key field in "video_views"
     references: [users.id], // References "users.id"
@@ -157,3 +157,44 @@ export const videoReactionRelations = relations(videoViews, ({ one }) => ({
 export const videoViewSelectSchema = createSelectSchema(videoViews); // Schema for selecting video view data
 export const videoViewInsertSchema = createInsertSchema(videoViews); // Schema for inserting a new video view
 export const videoViewUpdateSchema = createUpdateSchema(videoViews); // Schema for updating an existing video view
+
+// Enum defining possible reaction types
+export const reactionType = pgEnum("reaction_type", ["like", "dislike"]);
+
+// ========================
+// VIDEO REACTIONS TABLE DEFINITION
+// ========================
+export const videoReactions = pgTable(
+  "video_reactions", // Table name: "video_reactions"
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Links reaction to user; deletes reactions if user is removed
+      .notNull(),
+    videoId: uuid("video_id")
+      .references(() => videos.id, { onDelete: "cascade" }) // Links reaction to video; deletes reactions if video is removed
+      .notNull(),
+    type: reactionType("type").notNull(), // Specifies the type of reaction (like/dislike)
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the reaction is created
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the reaction is updated
+  },
+  (t) => [
+    primaryKey({ name: "video_reactions_pk", columns: [t.userId, t.videoId] }), // Composite primary key (userId, videoId)
+  ]
+);
+
+// Define relationships for video reactions
+export const videoReactionRelations = relations(videoReactions, ({ one }) => ({
+  user: one(users, {
+    fields: [videoReactions.userId], // Foreign key field in "video_reactions"
+    references: [users.id], // References "users.id"
+  }),
+  video: one(videos, {
+    fields: [videoReactions.videoId], // Foreign key field in "video_reactions"
+    references: [videos.id], // References "videos.id"
+  }),
+}));
+
+// Schemas for video reaction operations
+export const videoReactionSelectSchema = createSelectSchema(videoReactions); // Schema for selecting video reaction data
+export const videoReactionInsertSchema = createInsertSchema(videoReactions); // Schema for inserting a new video reaction
+export const videoReactionUpdateSchema = createUpdateSchema(videoReactions); // Schema for updating an existing video reaction

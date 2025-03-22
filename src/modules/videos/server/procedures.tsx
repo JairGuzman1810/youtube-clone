@@ -1,5 +1,11 @@
 import { db } from "@/db";
-import { users, videos, videoUpdateSchema, videoViews } from "@/db/schema";
+import {
+  users,
+  videoReactions,
+  videos,
+  videoUpdateSchema,
+  videoViews,
+} from "@/db/schema";
 import { mux } from "@/lib/mux";
 import { workflow } from "@/lib/workflow";
 import {
@@ -8,7 +14,7 @@ import {
   protectedProcedure,
 } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import { z } from "zod";
 
@@ -17,16 +23,58 @@ export const videosRouter = createTRPCRouter({
   // Fetch a single video by its ID, including associated user details
   getOne: baseProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const { clerkUserId } = ctx; // Get the authenticated Clerk user ID
+
+      let userId; // Initialize userId variable
+
+      // Fetch the user from the database using their Clerk user ID
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(inArray(users.clerkId, clerkUserId ? [clerkUserId] : []));
+
+      if (user) {
+        userId = user.id; // Assign the user ID if a matching user is found
+      }
+
+      // Create a temporary view for the authenticated user's reactions to videos
+      const viewerReactions = db.$with("viewer_reactions").as(
+        db
+          .select({
+            videoId: videoReactions.videoId, // Select the video ID
+            type: videoReactions.type, // Select the reaction type (like/dislike)
+          })
+          .from(videoReactions)
+          .where(inArray(videoReactions.userId, userId ? [userId] : [])) // Filter reactions by the authenticated user
+      );
+
       // Retrieve the video along with its associated user details from the database
       const [existingVideo] = await db
+        .with(viewerReactions) // Include the temporary reactions view
         .select({
           ...getTableColumns(videos), // Select all columns from the videos table
           user: { ...getTableColumns(users) }, // Include user details
           viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count the number of views for this video
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id), // Filter reactions by video ID
+              eq(videoReactions.type, "like") // Count the number of likes
+            )
+          ),
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id), // Filter reactions by video ID
+              eq(videoReactions.type, "dislike") // Count the number of dislikes
+            )
+          ),
+          viewerReaction: viewerReactions.type, // Fetch the authenticated user's reaction
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id)) // Ensure the video is linked to a user
+        .leftJoin(viewerReactions, eq(viewerReactions.videoId, videos.id)) // Join with viewer reactions to check if the user has reacted
         .where(eq(videos.id, input.id)); // Filter by the provided video ID
 
       if (!existingVideo) throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the video is not found
