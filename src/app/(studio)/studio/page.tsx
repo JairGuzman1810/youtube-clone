@@ -9,9 +9,10 @@ const Page = async () => {
   });
 
   return (
+    // Hydrates the client with preloaded server data
     <HydrateClient>
-      {/* Hydrates the client with preloaded server data */}
-      <StudioView /> {/* Render the studio view component */}
+      {/* Render the studio view component */}
+      <StudioView />
     </HydrateClient>
   );
 };

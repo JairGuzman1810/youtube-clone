@@ -9,11 +9,12 @@ interface LayoutProps {
 // Main layout component wrapping pages with a home layout and TRPC provider
 const Layout = ({ children }: LayoutProps) => {
   return (
+    // Wraps content inside the home layout
     <HomeLayout>
-      {/* Wraps content inside the home layout */}
+      {/* Provides API functionality to all child components */}
       <TRPCProvider>
-        {/* Provides API functionality to all child components */}
-        {children} {/* Render the page content */}
+        {/* Render the page content */}
+        {children}
       </TRPCProvider>
     </HomeLayout>
   );

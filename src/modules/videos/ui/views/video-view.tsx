@@ -13,12 +13,14 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
       <div className="flex flex-col xl:flex-row gap-6">
         {/* Main content area - Video player and comments */}
         <div className="flex-1 min-w-0">
-          <VideoSection videoId={videoId} /> {/* Renders the video player */}
+          {/* Renders the video player */}
+          <VideoSection videoId={videoId} />
           {/* Suggestions section (visible on small screens) */}
           <div className="xl:hidden block mt-4">
             <SuggestionsSection />
           </div>
-          <CommentsSections /> {/* Renders the comments section */}
+          {/* Renders the comments section */}
+          <CommentsSections videoId={videoId} />
         </div>
 
         {/* Sidebar - Suggestions section (visible on larger screens) */}

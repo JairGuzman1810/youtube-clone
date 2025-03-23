@@ -11,6 +11,11 @@ interface VideoPlayerProps {
   onPlay?: () => void; // Callback function triggered when the video starts playing
 }
 
+// VideoPlayer - Renders a video player using MuxPlayer with customizable options
+export const VideoPlayerSkeleton = () => {
+  return <div className="aspect-video bg-black rounded-xl"></div>;
+};
+
 // VideoPlayer component - Renders a video player using MuxPlayer
 export const VideoPlayer = ({
   playbackId,

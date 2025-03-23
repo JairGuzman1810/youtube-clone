@@ -41,7 +41,8 @@ export const PersonalSection = () => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>You</SidebarGroupLabel> {/* Section title */}
+      {/* Section title */}
+      <SidebarGroupLabel>You</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (

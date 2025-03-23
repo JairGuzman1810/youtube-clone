@@ -11,7 +11,8 @@ export const StudioView = () => {
           Manage your channel content and videos
         </p>
       </div>
-      <VideosSection /> {/* Renders the section displaying uploaded videos */}
+      {/* Renders the section displaying uploaded videos */}
+      <VideosSection />
     </div>
   );
 };

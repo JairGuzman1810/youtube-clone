@@ -8,9 +8,12 @@ export const HomeSidebar = () => {
   return (
     <Sidebar className="pt-16 z-40 border-none" collapsible="icon">
       <SidebarContent className="bg-background">
-        <MainSection /> {/* Renders the main navigation section */}
-        <Separator /> {/* Visual separator between sections */}
-        <PersonalSection /> {/* Renders the personal navigation section */}
+        {/* Renders the main navigation section */}
+        <MainSection />
+        {/* Visual separator between sections */}
+        <Separator />
+        {/* Renders the personal navigation section */}
+        <PersonalSection />
       </SidebarContent>
     </Sidebar>
   );

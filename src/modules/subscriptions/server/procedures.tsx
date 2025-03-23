@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 // Define the TRPC router for handling user subscriptions (follow/unfollow creators)
-export const SubscriptionsRouter = createTRPCRouter({
+export const subscriptionsRouter = createTRPCRouter({
   // Create a subscription to follow a creator
   create: protectedProcedure
     .input(z.object({ userId: z.string().uuid() })) // Validate input to ensure a UUID is provided for userId

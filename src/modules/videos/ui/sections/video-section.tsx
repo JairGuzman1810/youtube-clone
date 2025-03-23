@@ -6,8 +6,8 @@ import { useAuth } from "@clerk/nextjs";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { VideoBanner } from "../components/video-banner";
-import { VideoPlayer } from "../components/video-player";
-import { VideoTopRow } from "../components/video-top-row";
+import { VideoPlayer, VideoPlayerSkeleton } from "../components/video-player";
+import { VideoTopRow, VideoTopRowSkeleton } from "../components/video-top-row";
 
 // VideoSectionProps - Defines the props required for the VideoSection component
 interface VideoSectionProps {
@@ -17,11 +17,21 @@ interface VideoSectionProps {
 // VideoSection component - Handles video rendering with suspense and error boundaries
 export const VideoSection = ({ videoId }: VideoSectionProps) => {
   return (
-    <Suspense fallback={<p>loading...</p>}>
+    <Suspense fallback={<VideoSectionSkeleton />}>
       <ErrorBoundary fallback={<p>Error..</p>}>
         <VideoSectionSuspense videoId={videoId} />
       </ErrorBoundary>
     </Suspense>
+  );
+};
+
+// VideoSectionSkeleton - Displays a loading state for the VideoSection component
+const VideoSectionSkeleton = () => {
+  return (
+    <>
+      <VideoPlayerSkeleton />
+      <VideoTopRowSkeleton />
+    </>
   );
 };
 

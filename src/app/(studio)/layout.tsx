@@ -9,11 +9,12 @@ interface LayoutProps {
 // Studio layout component wrapping pages with a studio-specific layout and TRPC provider
 const Layout = ({ children }: LayoutProps) => {
   return (
+    //* Wraps content inside the studio layout
     <StudioLayout>
-      {/* Wraps content inside the studio layout */}
+      {/* Provides API functionality to all child components */}
       <TRPCProvider>
-        {/* Provides API functionality to all child components */}
-        {children} {/* Render the page content */}
+        {/* Render the page content */}
+        {children}
       </TRPCProvider>
     </StudioLayout>
   );

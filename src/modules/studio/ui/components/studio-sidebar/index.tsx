@@ -24,7 +24,8 @@ export const StudioSidebar = () => {
       <SidebarContent className="bg-background">
         <SidebarGroup>
           <SidebarMenu>
-            <StudioSidebarHeader /> {/* Custom header component */}
+            {/* Custom header component */}
+            <StudioSidebarHeader />
             {/* Content section */}
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -38,7 +39,8 @@ export const StudioSidebar = () => {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <Separator /> {/* Visual separator */}
+            {/* Visual separator */}
+            <Separator />
             {/* Exit studio button */}
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={"Exit studio"} asChild>

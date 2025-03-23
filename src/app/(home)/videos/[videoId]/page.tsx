@@ -13,6 +13,10 @@ const Page = async ({ params }: PageProps) => {
   // Prefetch video data for better performance and hydration
   void trpc.videos.getOne.prefetch({ id: videoId });
 
+  // Prefetch comments for the given video to optimize data fetching
+  // TODO: Update to use infinite query for better pagination and scalability
+  void trpc.comments.getMany.prefetch({ videoId: videoId });
+
   return (
     <HydrateClient>
       {/* Ensures server-fetched data is available on the client */}

@@ -13,9 +13,11 @@ export const StudioLayout = ({ children }: StudioLayoutProps) => {
     <SidebarProvider>
       {/* Provides context for sidebar state */}
       <div className="w-full">
-        <StudioNavbar /> {/* Top navigation bar */}
+        {/* Top navigation bar */}
+        <StudioNavbar />
         <div className="flex min-h-screen pt-[4rem]">
-          <StudioSidebar /> {/* Sidebar navigation */}
+          {/* Sidebar navigation */}
+          <StudioSidebar />
           <main className="flex-1 overflow-y-auto">{children}</main>
           {/* Main content area */}
         </div>

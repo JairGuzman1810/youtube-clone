@@ -11,7 +11,8 @@ export const HomeNavbar = () => {
       <div className="flex items-center gap-4 w-full">
         {/* Menu and Logo Section */}
         <div className="flex items-center flex-shrink-0">
-          <SidebarTrigger /> {/* Sidebar navigation trigger */}
+          {/* Sidebar navigation trigger */}
+          <SidebarTrigger />
           <Link href={"/"}>
             <div className="p-4 flex items-center gap-1">
               <Image src={"/logo.svg"} width={50} height={50} alt="Logo" />
@@ -22,12 +23,14 @@ export const HomeNavbar = () => {
 
         {/* Search bar Section */}
         <div className="flex-1 flex justify-center max-w-[720px] mx-auto">
-          <SearchInput /> {/* Search input field */}
+          {/* Search input field */}
+          <SearchInput />
         </div>
 
         {/* Authentication Button Section */}
         <div className="flex-shrink-0 items-center flex gap-4">
-          <AuthButton /> {/* Displays login or user profile button */}
+          {/* Displays login or user profile button */}
+          <AuthButton />
         </div>
       </div>
     </nav>

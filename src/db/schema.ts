@@ -43,7 +43,9 @@ export const userRelations = relations(users, ({ many }) => ({
   subscribers: many(subscriptions, {
     relationName: "subscriptions_creator_id_fkey", // User as a creator being subscribed to
   }),
+  comments: many(comments), // One user can post multiple comments
 }));
+
 // ========================
 // SUBSCRIPTIONS TABLE DEFINITION
 // ========================
@@ -69,12 +71,12 @@ export const subscriptions = pgTable(
 
 // Define relationships for subscriptions
 export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
-  viewerId: one(users, {
+  viewer: one(users, {
     fields: [subscriptions.viewerId], // Foreign key field in "subscriptions"
     references: [users.id], // References "users.id"
     relationName: "subscriptions_viewer_id_fkey",
   }),
-  creatorId: one(users, {
+  creator: one(users, {
     fields: [subscriptions.creatorId], // Foreign key field in "subscriptions"
     references: [users.id], // References "users.id"
     relationName: "subscriptions_creator_id_fkey",
@@ -161,7 +163,44 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
   }),
   views: many(videoViews), // A video can have multiple views
   reactions: many(videoReactions), // A video can have multiple reactions
+  comments: many(comments), // A video can have multiple comments
 }));
+
+// ========================
+// COMMENTS TABLE DEFINITION
+// ========================
+export const comments = pgTable(
+  "comments", // Table name: "comments"
+  {
+    id: uuid("id").primaryKey().defaultRandom(), // Unique identifier for the comment
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Links comment to user; deletes comments if user is removed
+      .notNull(),
+    videoId: uuid("video_id")
+      .references(() => videos.id, { onDelete: "cascade" }) // Links comment to video; deletes comments if video is removed
+      .notNull(),
+    value: text("value").notNull(), // Text content of the comment
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the comment is created
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the comment is last updated
+  }
+);
+
+// Define relationships for comments
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, {
+    fields: [comments.userId], // Foreign key field in "comments"
+    references: [users.id], // References "users.id"
+  }),
+  video: one(videos, {
+    fields: [comments.videoId], // Foreign key field in "comments"
+    references: [videos.id], // References "videos.id"
+  }),
+}));
+
+// Schemas for comment operations
+export const commentSelectSchema = createSelectSchema(comments); // Schema for selecting comment data
+export const commentInsertSchema = createInsertSchema(comments); // Schema for inserting a new comment
+export const commentUpdateSchema = createUpdateSchema(comments); // Schema for updating an existing comment
 
 // ========================
 // VIDEO VIEWS TABLE DEFINITION

@@ -12,7 +12,8 @@ export const StudioNavbar = () => {
       <div className="flex items-center gap-4 w-full">
         {/* Sidebar trigger and logo section */}
         <div className="flex items-center flex-shrink-0">
-          <SidebarTrigger /> {/* Button to toggle sidebar */}
+          {/* Button to toggle sidebar */}
+          <SidebarTrigger />
           <Link href={"/studio"}>
             <div className="p-4 flex items-center gap-1">
               <Image src={"/logo.svg"} width={50} height={50} alt="Logo" />
@@ -26,8 +27,10 @@ export const StudioNavbar = () => {
 
         {/* Action buttons section: Upload modal and authentication */}
         <div className="flex-shrink-0 items-center flex gap-4">
-          <StudioUploadModal /> {/* Opens upload modal */}
-          <AuthButton /> {/* User authentication button */}
+          {/* Opens upload modal */}
+          <StudioUploadModal />
+          {/* User authentication button */}
+          <AuthButton />
         </div>
       </div>
     </nav>
