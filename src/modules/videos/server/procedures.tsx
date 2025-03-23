@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  subscriptions,
   users,
   videoReactions,
   videos,
@@ -14,7 +15,7 @@ import {
   protectedProcedure,
 } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import { z } from "zod";
 
@@ -49,12 +50,29 @@ export const videosRouter = createTRPCRouter({
           .where(inArray(videoReactions.userId, userId ? [userId] : [])) // Filter reactions by the authenticated user
       );
 
+      // Create a temporary view for the authenticated user's subscriptions
+      const viewerSubscriptions = db.$with("viewer_subscriptions").as(
+        db
+          .select()
+          .from(subscriptions)
+          .where(inArray(subscriptions.viewerId, userId ? [userId] : [])) // Filter subscriptions by the authenticated user
+      );
+
       // Retrieve the video along with its associated user details from the database
       const [existingVideo] = await db
-        .with(viewerReactions) // Include the temporary reactions view
+        .with(viewerReactions, viewerSubscriptions) // Include temporary views
         .select({
           ...getTableColumns(videos), // Select all columns from the videos table
-          user: { ...getTableColumns(users) }, // Include user details
+          user: {
+            ...getTableColumns(users),
+            subscriberCount: db.$count(
+              subscriptions,
+              eq(subscriptions.creatorId, users.id)
+            ), // Count the number of subscribers for the video owner
+            viewerSubscribed: isNotNull(viewerSubscriptions.viewerId).mapWith(
+              Boolean
+            ), // Check if the authenticated user is subscribed to the video owner
+          },
           viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count the number of views for this video
           likeCount: db.$count(
             videoReactions,
@@ -74,7 +92,11 @@ export const videosRouter = createTRPCRouter({
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id)) // Ensure the video is linked to a user
-        .leftJoin(viewerReactions, eq(viewerReactions.videoId, videos.id)) // Join with viewer reactions to check if the user has reacted
+        .leftJoin(viewerReactions, eq(viewerReactions.videoId, videos.id)) // Join with viewer reactions
+        .leftJoin(
+          viewerSubscriptions,
+          eq(viewerSubscriptions.creatorId, users.id)
+        ) // Join with viewer subscriptions
         .where(eq(videos.id, input.id)); // Filter by the provided video ID
 
       if (!existingVideo) throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the video is not found

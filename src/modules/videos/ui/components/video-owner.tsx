@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
+import { useSubscriptions } from "@/modules/subscriptions/hooks/use-subscription";
 import { SubscriptionButton } from "@/modules/subscriptions/ui/components/subscription-button";
 import { UserInfo } from "@/modules/users/ui/components/user-info";
 import { useAuth } from "@clerk/nextjs";
@@ -14,7 +15,14 @@ interface VideoOwnerProps {
 
 // VideoOwner component - Displays video uploader details and subscription/edit options
 export const VideoOwner = ({ user, videoId }: VideoOwnerProps) => {
-  const { userId } = useAuth(); // Get the currently authenticated user ID
+  const { userId: clerkUserId, isLoaded } = useAuth(); // Get the currently authenticated user ID
+
+  // useSubscriptions hook - Manages subscription logic for the video owner
+  const { isPending, onClick } = useSubscriptions({
+    userId: user.id, // The ID of the video's uploader
+    isSubscribed: user.viewerSubscribed, // Whether the current user is subscribed
+    fromVideoId: videoId, // ID of the video being viewed
+  });
 
   return (
     <div className="flex items-center sm:items-start justify-between sm:justify-start gap-3 min-w-0">
@@ -26,22 +34,23 @@ export const VideoOwner = ({ user, videoId }: VideoOwnerProps) => {
             <UserInfo size={"lg"} name={user.name} />
             <span className="text-sm text-muted-foreground line-clamp-1">
               {/* TODO: Fetch and display actual subscriber count */}
-              {0} subscribers
+              {user.subscriberCount} subscribers
             </span>
           </div>
         </div>
       </Link>
 
       {/* Show "Edit Video" button if the user owns the video, otherwise show subscription button */}
-      {userId === user.clerkId ? (
+      {clerkUserId === user.clerkId ? (
         <Button variant={"secondary"} className="rounded-full">
           <Link href={`/studio/videos/${videoId}`}>Edit video</Link>
         </Button>
       ) : (
+        // SubscriptionButton - Allows the user to subscribe/unsubscribe from the video owner
         <SubscriptionButton
-          onClick={() => {}}
-          disabled={false}
-          isSubscribed={false}
+          onClick={onClick} // Handles subscription toggle
+          disabled={isPending || !isLoaded} // Disable button while processing
+          isSubscribed={user.viewerSubscribed} // Current subscription status
           className="flex-none"
         />
       )}

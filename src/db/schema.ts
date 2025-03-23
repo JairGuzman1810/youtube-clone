@@ -34,9 +34,51 @@ export const users = pgTable(
 
 // Define relationships for users
 export const userRelations = relations(users, ({ many }) => ({
-  videos: many(videos), // One user can have many videos
-  videoViews: many(videoViews), // One user can have many video views
-  videoReactions: many(videoReactions), // One user can have many video reactions (likes/dislikes)
+  videos: many(videos), // One user can upload multiple videos
+  videoViews: many(videoViews), // One user can view multiple videos
+  videoReactions: many(videoReactions), // One user can react to multiple videos (likes/dislikes)
+  subscriptions: many(subscriptions, {
+    relationName: "subscriptions_viewer_id_fkey", // User as a subscriber (viewer)
+  }),
+  subscribers: many(subscriptions, {
+    relationName: "subscriptions_creator_id_fkey", // User as a creator being subscribed to
+  }),
+}));
+// ========================
+// SUBSCRIPTIONS TABLE DEFINITION
+// ========================
+export const subscriptions = pgTable(
+  "subscriptions", // Table name: "subscriptions"
+  {
+    viewerId: uuid("viewer_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Foreign key linking to the subscribing user
+      .notNull(),
+    creatorId: uuid("creator_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Foreign key linking to the subscribed creator
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Auto-filled timestamp on creation
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Auto-filled timestamp on update
+  },
+  (t) => [
+    primaryKey({
+      name: "subscriptions_pk",
+      columns: [t.viewerId, t.creatorId], // Composite primary key (viewerId, creatorId) ensures unique subscriptions
+    }),
+  ]
+);
+
+// Define relationships for subscriptions
+export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
+  viewerId: one(users, {
+    fields: [subscriptions.viewerId], // Foreign key field in "subscriptions"
+    references: [users.id], // References "users.id"
+    relationName: "subscriptions_viewer_id_fkey",
+  }),
+  creatorId: one(users, {
+    fields: [subscriptions.creatorId], // Foreign key field in "subscriptions"
+    references: [users.id], // References "users.id"
+    relationName: "subscriptions_creator_id_fkey",
+  }),
 }));
 
 // ========================
