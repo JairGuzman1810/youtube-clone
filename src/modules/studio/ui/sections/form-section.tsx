@@ -255,7 +255,7 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                 Save
               </Button>
               {/* Dropdown menu for additional actions */}
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant={"ghost"} size={"icon"}>
                     <MoreVerticalIcon />
@@ -374,7 +374,7 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                           alt="Thumbnail"
                         />
                         {/* Dropdown menu for thumbnail options */}
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button
                               type="button"
