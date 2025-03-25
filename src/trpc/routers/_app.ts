@@ -1,4 +1,5 @@
 import { categoriesRouter } from "@/modules/categories/server/procedures";
+import { commentReactionsRouter } from "@/modules/comment-reactions/server/procedures";
 import { commentsRouter } from "@/modules/comments/server/procedures";
 import { studioRouter } from "@/modules/studio/server/procedures";
 import { subscriptionsRouter } from "@/modules/subscriptions/server/procedures";
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   videoViews: videoViewsRouter, // Handles video view tracking API procedures
   subscriptions: subscriptionsRouter, // Handles user subscription API procedures
   videoReactions: videoReactionsRouter, // Handles video reaction API procedures
+  commentReactions: commentReactionsRouter, // Handles comment reaction API procedures
 });
 
 // Export the type definition of the API for use in frontend and backend

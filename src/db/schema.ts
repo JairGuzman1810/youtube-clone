@@ -15,6 +15,9 @@ import {
   createUpdateSchema,
 } from "drizzle-zod";
 
+// Enum defining possible reaction types
+export const reactionType = pgEnum("reaction_type", ["like", "dislike"]);
+
 // ========================
 // USERS TABLE DEFINITION
 // ========================
@@ -44,6 +47,7 @@ export const userRelations = relations(users, ({ many }) => ({
     relationName: "subscriptions_creator_id_fkey", // User as a creator being subscribed to
   }),
   comments: many(comments), // One user can post multiple comments
+  commentReactions: many(commentReactions), // One user can react to multiple comments (likes/dislikes)
 }));
 
 // ========================
@@ -186,7 +190,7 @@ export const comments = pgTable(
 );
 
 // Define relationships for comments
-export const commentsRelations = relations(comments, ({ one }) => ({
+export const commentRelations = relations(comments, ({ one, many }) => ({
   user: one(users, {
     fields: [comments.userId], // Foreign key field in "comments"
     references: [users.id], // References "users.id"
@@ -195,12 +199,52 @@ export const commentsRelations = relations(comments, ({ one }) => ({
     fields: [comments.videoId], // Foreign key field in "comments"
     references: [videos.id], // References "videos.id"
   }),
+  reactions: many(commentReactions), // A comment can have multiple reactions (likes/dislikes)
 }));
 
 // Schemas for comment operations
 export const commentSelectSchema = createSelectSchema(comments); // Schema for selecting comment data
 export const commentInsertSchema = createInsertSchema(comments); // Schema for inserting a new comment
 export const commentUpdateSchema = createUpdateSchema(comments); // Schema for updating an existing comment
+
+// ============================
+// COMMENT REACTIONS TABLE DEFINITION
+// ============================
+export const commentReactions = pgTable(
+  "comment_reactions", // Table name: "comment_reactions"
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Links reaction to user; deletes reactions if user is removed
+      .notNull(),
+    commentId: uuid("comment_id")
+      .references(() => comments.id, { onDelete: "cascade" }) // Links reaction to comment; deletes reactions if comment is removed
+      .notNull(),
+    type: reactionType("type").notNull(), // Specifies the type of reaction (like/dislike)
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the reaction is created
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the reaction is updated
+  },
+  (t) => [
+    primaryKey({
+      name: "comment_reactions_pk",
+      columns: [t.userId, t.commentId], // Composite primary key (userId, commentId)
+    }),
+  ]
+);
+
+// Define relationships for comment reactions
+export const commentReactionRelations = relations(
+  commentReactions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [commentReactions.userId], // Foreign key field in "comment_reactions"
+      references: [users.id], // References "users.id"
+    }),
+    comment: one(comments, {
+      fields: [commentReactions.commentId], // Foreign key field in "comment_reactions"
+      references: [comments.id], // References "comments.id"
+    }),
+  })
+);
 
 // ========================
 // VIDEO VIEWS TABLE DEFINITION
@@ -223,7 +267,7 @@ export const videoViews = pgTable(
 );
 
 // Define relationships for video views
-export const videoViewsRelations = relations(videoViews, ({ one }) => ({
+export const videoViewRelations = relations(videoViews, ({ one }) => ({
   user: one(users, {
     fields: [videoViews.userId], // Foreign key field in "video_views"
     references: [users.id], // References "users.id"
@@ -238,9 +282,6 @@ export const videoViewsRelations = relations(videoViews, ({ one }) => ({
 export const videoViewSelectSchema = createSelectSchema(videoViews); // Schema for selecting video view data
 export const videoViewInsertSchema = createInsertSchema(videoViews); // Schema for inserting a new video view
 export const videoViewUpdateSchema = createUpdateSchema(videoViews); // Schema for updating an existing video view
-
-// Enum defining possible reaction types
-export const reactionType = pgEnum("reaction_type", ["like", "dislike"]);
 
 // ========================
 // VIDEO REACTIONS TABLE DEFINITION
