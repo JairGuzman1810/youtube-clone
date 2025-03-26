@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  foreignKey,
   integer,
   pgEnum,
   pgTable,
@@ -177,6 +178,7 @@ export const comments = pgTable(
   "comments", // Table name: "comments"
   {
     id: uuid("id").primaryKey().defaultRandom(), // Unique identifier for the comment
+    parentId: uuid("parent_id"), // If null, it's a main comment; if set, it's a reply to another comment
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" }) // Links comment to user; deletes comments if user is removed
       .notNull(),
@@ -186,6 +188,15 @@ export const comments = pgTable(
     value: text("value").notNull(), // Text content of the comment
     createdAt: timestamp("created_at").defaultNow().notNull(), // Timestamp when the comment is created
     updatedAt: timestamp("updated_at").defaultNow().notNull(), // Timestamp when the comment is last updated
+  },
+  (t) => {
+    return [
+      foreignKey({
+        columns: [t.parentId], // Foreign key referencing the parent comment
+        foreignColumns: [t.id], // Links to another comment in the same table
+        name: "comments_parent_id_fkey",
+      }).onDelete("cascade"), // If a parent comment is deleted, its replies are also deleted
+    ];
   }
 );
 
@@ -199,7 +210,13 @@ export const commentRelations = relations(comments, ({ one, many }) => ({
     fields: [comments.videoId], // Foreign key field in "comments"
     references: [videos.id], // References "videos.id"
   }),
+  parent: one(comments, {
+    fields: [comments.parentId], // References the parent comment (if it's a reply)
+    references: [comments.id], // Links back to the comment ID
+    relationName: "comments_parent_id_fkey",
+  }),
   reactions: many(commentReactions), // A comment can have multiple reactions (likes/dislikes)
+  replies: many(comments, { relationName: "comments_parent_id_fkey" }), // A comment can have multiple replies
 }));
 
 // Schemas for comment operations

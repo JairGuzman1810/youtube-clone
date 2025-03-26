@@ -19,11 +19,20 @@ import { z } from "zod";
 // CommentFormProps - Defines the props required for the CommentForm component
 interface CommentFormProps {
   videoId: string; // Unique identifier for the video
+  parentId?: string; // Optional parent comment ID for replies
   onSuccess?: () => void; // Callback function triggered on successful comment submission
+  onCancel?: () => void; // Callback function triggered when comment form is canceled
+  variant?: "comment" | "reply"; // Determines if the form is for a comment or a reply
 }
 
-// CommentForm component - Handles adding new comments to a video
-export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
+// CommentForm - Component for submitting comments or replies
+export const CommentForm = ({
+  videoId,
+  parentId,
+  onCancel,
+  onSuccess,
+  variant = "comment",
+}: CommentFormProps) => {
   const { user } = useUser(); // Get the authenticated user's details
   const clerk = useClerk(); // Clerk instance for authentication handling
   const utils = trpc.useUtils(); // Utility functions for cache invalidation
@@ -31,7 +40,8 @@ export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
   // Mutation to create a new comment
   const create = trpc.comments.create.useMutation({
     onSuccess: () => {
-      utils.comments.getMany.invalidate({ videoId }); // Invalidate cache to refresh comments
+      utils.comments.getMany.invalidate({ videoId }); // Invalidate cache to refresh top-level comments
+      utils.comments.getMany.invalidate({ videoId, parentId }); // Invalidate cache to refresh replies
       form.reset(); // Reset the form after successful submission
       toast.success("Comment added"); // Show success notification
       onSuccess?.(); // Execute optional success callback
@@ -50,7 +60,8 @@ export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
   const form = useForm<z.infer<typeof commentSchema>>({
     resolver: zodResolver(commentSchema), // Validate form inputs using Zod
     defaultValues: {
-      videoId,
+      parentId, // Pre-fill parentId if replying
+      videoId, // Set the video ID
       value: "", // Default empty comment value
     },
   });
@@ -58,6 +69,12 @@ export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
   // Handle form submission
   const handleSubmit = (values: z.infer<typeof commentSchema>) => {
     create.mutate(values); // Send mutation request to create a comment
+  };
+
+  // Handle form cancellation
+  const handleCancel = () => {
+    form.reset(); // Reset form fields
+    onCancel?.(); // Execute optional cancel callback
   };
 
   return (
@@ -82,7 +99,11 @@ export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
                 <FormControl>
                   <Textarea
                     {...field}
-                    placeholder="Add a comment..."
+                    placeholder={
+                      variant === "reply"
+                        ? "Reply to this comment..."
+                        : "Add a comment..."
+                    }
                     className="resize-none bg-transparent overflow-hidden min-h-0"
                   />
                 </FormControl>
@@ -91,10 +112,18 @@ export const CommentForm = ({ videoId, onSuccess }: CommentFormProps) => {
             )}
           />
 
-          {/* Submit Button */}
+          {/* Action Buttons (Submit & Cancel) */}
           <div className="justify-end gap-2 mt-2 flex">
+            {/* Cancel Button (Only visible if onCancel is provided) */}
+            {onCancel && (
+              <Button variant={"ghost"} type="button" onClick={handleCancel}>
+                Cancel
+              </Button>
+            )}
+
+            {/* Submit Button */}
             <Button disabled={create.isPending} type="submit" size={"sm"}>
-              Comment
+              {variant === "reply" ? "Reply" : "Comment"}
             </Button>
           </div>
         </div>

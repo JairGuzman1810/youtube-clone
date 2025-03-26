@@ -13,6 +13,8 @@ import {
   eq,
   getTableColumns,
   inArray,
+  isNotNull,
+  isNull,
   lt,
   or,
 } from "drizzle-orm";
@@ -22,15 +24,37 @@ import { z } from "zod";
 export const commentsRouter = createTRPCRouter({
   // Create a new comment on a video
   create: protectedProcedure
-    .input(z.object({ videoId: z.string().uuid(), value: z.string() })) // Ensure videoId is a valid UUID and value is a string
+    .input(
+      z.object({
+        parentId: z.string().uuid().nullish(), // Optional parent comment ID (for replies)
+        videoId: z.string().uuid(), // Required video ID to associate the comment with a video
+        value: z.string(), // The actual text content of the comment
+      })
+    ) // Ensure `videoId` is a valid UUID and `value` is a string
     .mutation(async ({ ctx, input }) => {
-      const { videoId, value } = input;
+      const { parentId, videoId, value } = input;
       const { id: userId } = ctx.user; // Get the authenticated user's ID
+
+      // Check if the parent comment exists (if this is a reply)
+      const [existingComment] = await db
+        .select()
+        .from(comments)
+        .where(inArray(comments.id, parentId ? [parentId] : []));
+
+      // If parentId is provided but the referenced comment doesn't exist, throw an error
+      if (!existingComment && parentId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      // Prevent replies to replies (only allow replies to top-level comments)
+      if (existingComment?.parentId && parentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" });
+      }
 
       // Insert the new comment into the database
       const [createdComment] = await db
         .insert(comments)
-        .values({ userId, videoId, value }) // Save comment with user ID and video ID
+        .values({ userId, videoId, parentId, value }) // Save comment with user ID, video ID, and optional parent ID
         .returning(); // Return the newly created comment
 
       return createdComment;
@@ -41,6 +65,7 @@ export const commentsRouter = createTRPCRouter({
     .input(
       z.object({
         videoId: z.string().uuid(), // Validate videoId as a UUID
+        parentId: z.string().uuid().nullish(), // Optional parent ID for replies
         cursor: z
           .object({
             id: z.string().uuid(), // Cursor ID for pagination (last comment ID)
@@ -52,7 +77,7 @@ export const commentsRouter = createTRPCRouter({
     )
     .query(async ({ input, ctx }) => {
       const { clerkUserId } = ctx; // Get the Clerk user ID from the request context
-      const { videoId, cursor, limit } = input; // Extract input parameters
+      const { parentId, videoId, cursor, limit } = input; // Extract input parameters
 
       let userId; // Initialize userId variable
 
@@ -77,6 +102,18 @@ export const commentsRouter = createTRPCRouter({
           .where(inArray(commentReactions.userId, userId ? [userId] : [])) // Filter reactions by the current user
       );
 
+      // Create a temporary table to count replies for each comment
+      const replies = db.$with("replies").as(
+        db
+          .select({
+            parentId: comments.parentId, // Parent comment ID
+            count: count(comments.id).as("count"), // Count replies for each parent comment
+          })
+          .from(comments)
+          .where(isNotNull(comments.parentId)) // Only count replies (comments with a parent)
+          .groupBy(comments.parentId) // Group by parent ID
+      );
+
       // Fetch total count of comments and the paginated comments list
       const [totalData, data] = await Promise.all([
         // Query to count the total number of comments for the given video
@@ -89,11 +126,12 @@ export const commentsRouter = createTRPCRouter({
 
         // Query to fetch paginated comments along with user and reaction details
         db
-          .with(viewerReactions) // Use the temporary table for viewer reactions
+          .with(viewerReactions, replies) // Use the temporary tables for reactions and replies
           .select({
             ...getTableColumns(comments), // Select all columns from the "comments" table
             user: users, // Include user details for each comment
             viewerReaction: viewerReactions.type, // Get the current user's reaction to each comment
+            replyCount: replies.count, // Count of replies for each comment
             likeCount: db.$count(
               commentReactions,
               and(
@@ -113,6 +151,9 @@ export const commentsRouter = createTRPCRouter({
           .where(
             and(
               eq(comments.videoId, videoId), // Filter by videoId to get only relevant comments
+              parentId
+                ? eq(comments.parentId, parentId) // If fetching replies, match parentId
+                : isNull(comments.parentId), // Otherwise, fetch top-level comments
               cursor
                 ? or(
                     lt(comments.updatedAt, cursor.updatedAt), // Fetch comments older than the cursor's timestamp
@@ -126,6 +167,7 @@ export const commentsRouter = createTRPCRouter({
           )
           .innerJoin(users, eq(comments.userId, users.id)) // Join with the "users" table to get user details
           .leftJoin(viewerReactions, eq(comments.id, viewerReactions.commentId)) // Left join to get the user's reaction for each comment
+          .leftJoin(replies, eq(comments.id, replies.parentId)) // Left join to get the reply count for each comment
           .orderBy(desc(comments.updatedAt), desc(comments.id)) // Order by latest comments first
           .limit(limit + 1), // Fetch one extra record to check if there’s more data
       ]);

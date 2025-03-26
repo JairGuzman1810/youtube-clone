@@ -12,6 +12,8 @@ import { trpc } from "@/trpc/client";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { formatDistanceToNow } from "date-fns";
 import {
+  ChevronDownIcon,
+  ChevronUpIcon,
   MessageSquareIcon,
   MoreVerticalIcon,
   ThumbsDownIcon,
@@ -19,18 +21,29 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 import { CommentsGetManyOutput } from "../../type";
+import { CommentForm } from "./comment-form";
+import { CommentReplies } from "./comment-replies";
 
 // CommentItemProps - Defines the props required for the CommentItem component
 interface CommentItemProps {
   comment: CommentsGetManyOutput["items"][number]; // Represents a single comment
+  variant?: "reply" | "comment"; // Determines if this is a top-level comment or a reply
 }
 
-// CommentItem component - Renders an individual comment with user details
-export const CommentItem = ({ comment }: CommentItemProps) => {
+// CommentItem - Renders an individual comment with user details, actions, and replies
+export const CommentItem = ({
+  comment,
+  variant = "comment",
+}: CommentItemProps) => {
   const clerk = useClerk(); // Initialize Clerk for handling authentication-related functionalities
   const { userId } = useAuth(); // Destructure userId from useAuth hook, which gives access to the authenticated user's ID
+
+  const [isReplyOpen, setIsReplyOpen] = useState(false); // isReplyOpen - Controls whether the reply form is visible
+  const [isRepliesOpen, setIsRepliesOpen] = useState(false); // isRepliesOpen - Controls whether the comment's replies are displayed
+
   const utils = trpc.useUtils(); // Access TRPC utilities for data invalidation and other server-related tasks
 
   // Remove comment mutation - Handles deleting a comment
@@ -89,7 +102,7 @@ export const CommentItem = ({ comment }: CommentItemProps) => {
         {/* User Avatar with link to their profile */}
         <Link href={`/users/${comment.userId}`}>
           <UserAvatar
-            size="lg"
+            size={variant === "comment" ? "lg" : "sm"}
             imageUrl={comment.user.imageUrl}
             name={comment.user.name}
           />
@@ -155,6 +168,17 @@ export const CommentItem = ({ comment }: CommentItemProps) => {
                 {comment.dislikeCount}
               </span>
             </div>
+            {/* Reply action */}
+            {variant === "comment" && (
+              <Button
+                variant={"ghost"}
+                size={"sm"}
+                className="h-8"
+                onClick={() => setIsReplyOpen(true)}
+              >
+                Reply
+              </Button>
+            )}
           </div>
         </div>
 
@@ -167,11 +191,12 @@ export const CommentItem = ({ comment }: CommentItemProps) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {/* Reply action */}
-            <DropdownMenuItem onClick={() => {}}>
-              <MessageSquareIcon className="size-4" />
-              Reply
-            </DropdownMenuItem>
-
+            {variant === "comment" && (
+              <DropdownMenuItem onClick={() => setIsReplyOpen(true)}>
+                <MessageSquareIcon className="size-4" />
+                Reply
+              </DropdownMenuItem>
+            )}
             {/* Delete action (only available for comment owner) */}
             {comment.user.clerkId === userId && (
               <DropdownMenuItem
@@ -184,6 +209,38 @@ export const CommentItem = ({ comment }: CommentItemProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {/* Reply form for adding a new reply */}
+      {isReplyOpen && variant === "comment" && (
+        <div className="mt-4 pl-14">
+          <CommentForm
+            variant="reply"
+            parentId={comment.id}
+            videoId={comment.videoId}
+            onCancel={() => setIsReplyOpen(false)}
+            onSuccess={() => {
+              setIsReplyOpen(false);
+              setIsRepliesOpen(true);
+            }}
+          />
+        </div>
+      )}
+      {/* Replies count and toggle button */}
+      {comment.replyCount > 0 && variant === "comment" && (
+        <div className="pl-14">
+          <Button
+            variant="tertiary"
+            size={"sm"}
+            onClick={() => setIsRepliesOpen((current) => !current)}
+          >
+            {isRepliesOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+            {comment.replyCount} replies
+          </Button>
+        </div>
+      )}
+      {/* Display replies if opened */}
+      {comment.replyCount > 0 && variant === "comment" && isRepliesOpen && (
+        <CommentReplies parentId={comment.id} videoId={comment.videoId} />
+      )}
     </div>
   );
 };
