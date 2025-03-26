@@ -20,6 +20,12 @@ const Page = async ({ params }: PageProps) => {
     limit: DEFAULT_LIMIT,
   });
 
+  // Prefetch suggestions for the given video to optimize data fetching
+  void trpc.suggestions.getMany.prefetchInfinite({
+    videoId: videoId,
+    limit: DEFAULT_LIMIT,
+  });
+
   return (
     <HydrateClient>
       {/* Ensures server-fetched data is available on the client */}

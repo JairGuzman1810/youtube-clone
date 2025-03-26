@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
-import { VideoGetOneOutput } from "../../server/types";
+import { VideoGetOneOutput } from "../../types";
 import { VideoDescription } from "./video-description";
 import { VideoMenu } from "./video-menu";
 import { VideoOwner } from "./video-owner";

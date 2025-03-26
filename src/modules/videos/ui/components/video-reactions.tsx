@@ -5,7 +5,7 @@ import { trpc } from "@/trpc/client";
 import { useClerk } from "@clerk/nextjs";
 import { ThumbsDownIcon, ThumbsUpIcon } from "lucide-react";
 import { toast } from "sonner";
-import { VideoGetOneOutput } from "../../server/types";
+import { VideoGetOneOutput } from "../../types";
 
 // VideoReactionsProps - Props for the VideoReactions component
 interface VideoReactionsProps {

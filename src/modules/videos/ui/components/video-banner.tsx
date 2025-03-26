@@ -1,5 +1,5 @@
 import { AlertTriangleIcon } from "lucide-react";
-import { VideoGetOneOutput } from "../../server/types";
+import { VideoGetOneOutput } from "../../types";
 
 // VideoBannerProps - Defines the props required for the VideoBanner component
 interface VideoBannerProps {

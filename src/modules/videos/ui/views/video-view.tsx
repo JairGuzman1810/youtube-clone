@@ -17,7 +17,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
           <VideoSection videoId={videoId} />
           {/* Suggestions section (visible on small screens) */}
           <div className="xl:hidden block mt-4">
-            <SuggestionsSection />
+            <SuggestionsSection videoId={videoId} isManual />
           </div>
           {/* Renders the comments section */}
           <CommentsSections videoId={videoId} />
@@ -25,7 +25,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
 
         {/* Sidebar - Suggestions section (visible on larger screens) */}
         <div className="hidden xl:block w-full xl:w-[380px] 2xl:[460px] shrink-1">
-          <SuggestionsSection />
+          <SuggestionsSection videoId={videoId} />
         </div>
       </div>
     </div>

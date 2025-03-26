@@ -5,7 +5,7 @@ import { SubscriptionButton } from "@/modules/subscriptions/ui/components/subscr
 import { UserInfo } from "@/modules/users/ui/components/user-info";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { VideoGetOneOutput } from "../../server/types";
+import { VideoGetOneOutput } from "../../types";
 
 // VideoOwnerProps - Defines the props for the VideoOwner component
 interface VideoOwnerProps {
