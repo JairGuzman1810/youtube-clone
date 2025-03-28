@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { VideoGetManyOutput } from "../../types";
 import { VideoMenu } from "./video-menu";
-import { VideoThumbnail } from "./video-thumbnail";
+import { VideoThumbnail, VideoThumbnailSkeleton } from "./video-thumbnail";
 
 // videoRowCardVariants - Defines styles for different video row card sizes
 const videoRowCardVariants = cva("group flex min-w-0", {
@@ -47,10 +47,36 @@ interface VideoRowCardProps extends VariantProps<typeof videoRowCardVariants> {
 }
 
 // VideoRowCardSkeleton - Skeleton loader for the video row card
-export const VideoRowCardSkeleton = () => {
+export const VideoRowCardSkeleton = ({
+  size = "default",
+}: VariantProps<typeof videoRowCardVariants>) => {
   return (
-    <div>
-      <Skeleton />
+    <div className={videoRowCardVariants({ size })}>
+      {/* Thumbnail Skeleton */}
+      <div className={thumbnailVariants({ size })}>
+        <VideoThumbnailSkeleton />
+      </div>
+
+      {/* Info Skeleton */}
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between gap-x-2">
+          <div className="flex-1 min-w-0">
+            <Skeleton
+              className={cn("h-5 w-[40%]", size === "compact" && "h-4 w-[40%]")}
+            />
+            {size === "default" && (
+              <>
+                <Skeleton className="h-4 w-[20%] mt-1" />
+                <div className="flex items-center gap-2 my-3">
+                  <Skeleton className="rounded-full size-8" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </>
+            )}
+            {size === "default" && <Skeleton className="h-4 w-[50%] mt-1" />}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

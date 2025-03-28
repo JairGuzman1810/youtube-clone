@@ -3,8 +3,16 @@
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { DEFAULT_LIMIT } from "@/constants";
 import { trpc } from "@/trpc/client";
-import { VideoGridCard } from "../components/video-grid-card";
-import { VideoRowCard } from "../components/video-row-card";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+import {
+  VideoGridCard,
+  VideoGridCardSkeleton,
+} from "../components/video-grid-card";
+import {
+  VideoRowCard,
+  VideoRowCardSkeleton,
+} from "../components/video-row-card";
 
 // SuggestionsSection - Displays a list of video suggestions with infinite scroll
 interface SuggestionsSectionProps {
@@ -12,7 +20,42 @@ interface SuggestionsSectionProps {
   isManual?: boolean; // Whether the user needs to manually trigger loading more suggestions
 }
 
+// SuggestionsSection - Main component for fetching and displaying video suggestions
 export const SuggestionsSection = ({
+  videoId,
+  isManual,
+}: SuggestionsSectionProps) => {
+  return (
+    <Suspense fallback={<SuggestionsSectionSkeleton />}>
+      <ErrorBoundary fallback={<p>Error...</p>}>
+        <SuggestionsSectionSuspense videoId={videoId} isManual={isManual} />
+      </ErrorBoundary>
+    </Suspense>
+  );
+};
+
+// SuggestionsSectionSkeleton - Displays loading skeletons while the content is fetching
+const SuggestionsSectionSkeleton = () => {
+  return (
+    <>
+      {/* Skeletons for larger screens (row layout) */}
+      <div className="hidden md:block space-y-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <VideoRowCardSkeleton key={index} size="compact" />
+        ))}
+      </div>
+      {/* Skeletons for smaller screens (grid layout) */}
+      <div className="block md:hidden space-y-10">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <VideoGridCardSkeleton key={index} />
+        ))}
+      </div>
+    </>
+  );
+};
+
+// SuggestionsSectionSuspense - Handles the actual fetching and rendering of video suggestions
+const SuggestionsSectionSuspense = ({
   videoId,
   isManual,
 }: SuggestionsSectionProps) => {

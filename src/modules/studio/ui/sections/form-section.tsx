@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { APP_URL } from "@/constants";
 import { videoUpdateSchema } from "@/db/schema";
 import { snakeCaseToTitle } from "@/lib/utils";
 import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
@@ -160,6 +161,18 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
     },
   });
 
+  // Mutation hook for revalidating video upload status with Mux
+  const revalidate = trpc.videos.revalidate.useMutation({
+    onSuccess: () => {
+      utils.studio.getMany.invalidate(); // Refresh the list of videos in the studio
+      utils.studio.getOne.invalidate({ id: videoId }); // Refresh the specific video details
+      toast.success("Video revalidated"); // Display success notification
+    },
+    onError: () => {
+      toast.error("Something went wrong"); // Display error notification if revalidation fails
+    },
+  });
+
   // Mutation hook for restoring the video thumbnail from Mux
   const restoreThumbnail = trpc.videos.restoreThumbnail.useMutation({
     onSuccess: () => {
@@ -212,9 +225,7 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
   };
 
   // Construct full URL for video link
-  const fullUrl = `${
-    process.env.VERCEL_URL || "http://localhost:3000"
-  }/videos/${videoId}`;
+  const fullUrl = `${APP_URL || "http://localhost:3000"}/videos/${videoId}`;
 
   const [isCopied, setIsCopied] = useState(false); // State for copy button feedback
 
@@ -262,11 +273,19 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {/* Option to delete the video */}
                   <DropdownMenuItem
                     onClick={() => remove.mutate({ id: videoId })}
                   >
                     <TrashIcon className="size-4 mr-2" />
                     Delete
+                  </DropdownMenuItem>
+                  {/* Option to revalidate the video's upload status with Mux */}
+                  <DropdownMenuItem
+                    onClick={() => revalidate.mutate({ id: videoId })}
+                  >
+                    <RotateCcwIcon className="size-4 mr-2" />
+                    Revalidate
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

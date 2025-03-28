@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDuration } from "@/lib/utils";
 import Image from "next/image";
 import { THUMBNAIL_FALLBACK } from "../../constants";
@@ -9,6 +10,15 @@ interface VideoThumbnailProps {
   title: string; // Title of the video, used for accessibility (alt text)
   duration: number; // Duration of the video in milliseconds
 }
+
+// VideoThumbnailSkeleton - Placeholder skeleton for loading video thumbnails
+export const VideoThumbnailSkeleton = () => {
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl aspect-video">
+      <Skeleton className="size-full" />
+    </div>
+  );
+};
 
 // VideoThumbnail component displays a video's thumbnail and preview on hover
 export const VideoThumbnail = ({

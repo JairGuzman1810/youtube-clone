@@ -1,6 +1,7 @@
 import { categoriesRouter } from "@/modules/categories/server/procedures";
 import { commentReactionsRouter } from "@/modules/comment-reactions/server/procedures";
 import { commentsRouter } from "@/modules/comments/server/procedures";
+import { searchRouter } from "@/modules/search/server/procedures";
 import { studioRouter } from "@/modules/studio/server/procedures";
 import { subscriptionsRouter } from "@/modules/subscriptions/server/procedures";
 import { suggestionsRouter } from "@/modules/suggestions/server/procedure";
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   categories: categoriesRouter, // Handles category-related API procedures
   videoViews: videoViewsRouter, // Handles video view tracking API procedures
   suggestions: suggestionsRouter, // Handles video suggestion API procedures
+  search: searchRouter, // Handles video search API procedures
   subscriptions: subscriptionsRouter, // Handles user subscription API procedures
   videoReactions: videoReactionsRouter, // Handles video reaction API procedures
   commentReactions: commentReactionsRouter, // Handles comment reaction API procedures

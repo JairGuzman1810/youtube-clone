@@ -132,6 +132,59 @@ export const videosRouter = createTRPCRouter({
 
       return workflowRunId; // Return the workflow run ID
     }),
+  // Updates the video status by revalidating its upload status from Mux
+  revalidate: protectedProcedure
+    .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user; // Retrieve the authenticated user's ID
+
+      // Fetch the existing video that belongs to the user
+      const [existingVideo] = await db
+        .select()
+        .from(videos)
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)));
+
+      if (!existingVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Throw error if video is not found or unauthorized
+      }
+
+      if (!existingVideo.muxUploadId) {
+        throw new TRPCError({ code: "BAD_REQUEST" }); // Throw error if the video has no associated Mux upload ID
+      }
+
+      // Retrieve the upload details from Mux using the stored Mux upload ID
+      const upload = await mux.video.uploads.retrieve(
+        existingVideo.muxUploadId
+      );
+
+      if (!upload || !upload.asset_id) {
+        throw new TRPCError({ code: "BAD_REQUEST" }); // Throw error if upload or asset ID is invalid
+      }
+
+      // Retrieve the asset details from Mux using the asset ID from the upload details
+      const asset = await mux.video.assets.retrieve(upload.asset_id);
+
+      if (!asset) {
+        throw new TRPCError({ code: "BAD_REQUEST" }); // Throw error if the asset retrieval fails
+      }
+
+      // Convert Mux asset duration from seconds to milliseconds for consistency
+      const duration = asset.duration ? Math.round(asset.duration * 1000) : 0;
+
+      // Update the video record in the database with the latest Mux details
+      const [updatedVideo] = await db
+        .update(videos)
+        .set({
+          muxStatus: asset.status, // Update the Mux processing status
+          muxPlaybackId: asset.playback_ids?.[0].id, // Store the Mux playback ID if available
+          muxAssetId: asset.id, // Store the Mux asset ID
+          duration, // Store the converted video duration
+        })
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
+        .returning(); // Return the updated video record
+
+      return updatedVideo; // Return the updated video details
+    }),
   // Restore the video's thumbnail using the Mux thumbnail
   restoreThumbnail: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID

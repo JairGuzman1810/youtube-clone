@@ -1,41 +1,30 @@
-// Import necessary database and TRPC modules
 import { db } from "@/db";
 import { users, videoReactions, videos, videoViews } from "@/db/schema";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
-import { TRPCError } from "@trpc/server";
-import { and, desc, eq, getTableColumns, lt, not, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, lt, or } from "drizzle-orm";
 import z from "zod";
 
-// Define the TRPC router for fetching video suggestions
-export const suggestionsRouter = createTRPCRouter({
-  // Fetch similar videos based on the current video
+// Define the TRPC router for searching videos by category or query (both optional)
+export const searchRouter = createTRPCRouter({
+  // Fetch multiple videos with pagination, filtering by optional query or category
   getMany: baseProcedure
     .input(
       z.object({
-        videoId: z.string().uuid(), // ID of the video the user is watching
+        query: z.string().nullish(), // Search query to filter video titles (optional)
+        categoryId: z.string().uuid().nullish(), // Category ID to filter videos by category (optional)
         cursor: z
           .object({
             id: z.string().uuid(), // Cursor ID (UUID format) for pagination
-            updatedAt: z.date(), // Timestamp of the last fetched video
+            updatedAt: z.date(), // Timestamp of the last fetched video for pagination
           })
           .nullish(), // Cursor can be null (first page)
         limit: z.number().min(1).max(100), // Limit number of videos per request
       })
     )
     .query(async ({ input }) => {
-      const { videoId, cursor, limit } = input;
+      const { cursor, limit, query, categoryId } = input;
 
-      // Check if the requested video exists
-      const [existingVideo] = await db
-        .select()
-        .from(videos)
-        .where(eq(videos.id, videoId));
-
-      if (!existingVideo) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
-
-      // Query database to fetch videos from the same category as the current video
+      // Query database to fetch videos with optional search query and category filter
       const data = await db
         .select({
           ...getTableColumns(videos), // Fetch all columns from the videos table
@@ -60,11 +49,9 @@ export const suggestionsRouter = createTRPCRouter({
         .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table
         .where(
           and(
-            not(eq(videos.id, existingVideo.id)), // Exclude the current video from the suggestions list
-            eq(videos.visibility, "public"), // Only include videos that are publicly visible
-            existingVideo.categoryId
-              ? eq(videos.categoryId, existingVideo.categoryId) // Filter videos by category
-              : undefined,
+            eq(videos.visibility, "public"), // Ensure the video is publicly visible
+            query ? ilike(videos.title, `%${query}%`) : undefined, // Filter videos by search query (if provided)
+            categoryId ? eq(videos.categoryId, categoryId) : undefined, // Filter videos by category (if provided)
             cursor
               ? or(
                   lt(videos.updatedAt, cursor.updatedAt), // Get videos with an older update timestamp

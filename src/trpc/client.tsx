@@ -1,6 +1,7 @@
 "use client";
 // Ensures this file runs in a client component
 
+import { APP_URL } from "@/constants";
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
@@ -35,7 +36,7 @@ function getQueryClient() {
 function getUrl() {
   const base = (() => {
     if (typeof window !== "undefined") return ""; // Use relative URL in browser
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // Use Vercel deployment URL
+    if (APP_URL) return `https://${APP_URL}`; // Use Vercel deployment URL
     return "http://localhost:3000"; // Fallback for local development
   })();
   return `${base}/api/trpc`; // Append TRPC endpoint

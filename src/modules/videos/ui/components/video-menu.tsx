@@ -5,6 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { APP_URL } from "@/constants";
 import {
   ListPlusIcon,
   MoreVerticalIcon,
@@ -31,9 +32,7 @@ export const VideoMenu = ({
     // TODO: Change URL if deploying outside of VERCEL
     // Constructs the full video URL using the VERCEL_URL environment variable
     // Falls back to localhost for local development
-    const fullUrl = `${
-      process.env.VERCEL_URL || "http://localhost:3000"
-    }/videos/${videoId}`;
+    const fullUrl = `${APP_URL || "http://localhost:3000"}/videos/${videoId}`;
 
     // Copies the video URL to the user's clipboard
     navigator.clipboard.writeText(fullUrl);

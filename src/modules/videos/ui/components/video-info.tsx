@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/user-avatar";
 import { UserInfo } from "@/modules/users/ui/components/user-info";
 import { formatDistanceToNow } from "date-fns";
@@ -6,12 +7,26 @@ import { useMemo } from "react";
 import { VideoGetManyOutput } from "../../types";
 import { VideoMenu } from "./video-menu";
 
-// VideoInfo - Displays video metadata including title, uploader, views, and upload time
+// VideoInfoProps - Interface defining the props for the VideoInfo component
 interface VideoInfoProps {
   data: VideoGetManyOutput["items"][number]; // Video data
   onRemove?: () => void; // Callback for removing the video (optional)
 }
 
+// VideoInfoSkeleton - Placeholder skeleton for loading video metadata
+export const VideoInfoSkeleton = () => {
+  return (
+    <div className="flex gap-3">
+      <Skeleton className="size-10 flex-shrink-0 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-5 w-[90%]" />
+        <Skeleton className="h-5 w-[70%]" />
+      </div>
+    </div>
+  );
+};
+
+// VideoInfo - Displays video metadata including title, uploader, views, and upload time
 export const VideoInfo = ({ data, onRemove }: VideoInfoProps) => {
   // Formats the number of views in a compact notation (e.g., 1K)
   const compactViews = useMemo(() => {
