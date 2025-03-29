@@ -15,12 +15,278 @@ import {
   protectedProcedure,
 } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+} from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import { z } from "zod";
 
 // Define the TRPC router for handling video-related API endpoints
 export const videosRouter = createTRPCRouter({
+  // Fetch videos from channels that the user is subscribed to
+  // This query retrieves videos from creators that the authenticated user is subscribed to.
+  getManySubscribed: protectedProcedure
+    .input(
+      z.object({
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            updatedAt: z.date(), // Timestamp of the last fetched video for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Limit number of videos per request
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user; // Fetch the logged-in user's ID from the context
+      const { cursor, limit } = input;
+
+      // Create a temporary view that contains the creator IDs of all subscriptions for the logged-in user.
+      const viewerSubscriptions = db.$with("viewer_subscriptions").as(
+        db
+          .select({
+            userId: subscriptions.creatorId, // Get the creator ID of the subscription
+          })
+          .from(subscriptions)
+          .where(eq(subscriptions.viewerId, userId)) // Filter subscriptions by the logged-in user
+      );
+
+      // Query database to fetch videos with optional search query and category filter
+      const data = await db
+        .with(viewerSubscriptions) // Includes viewerSubscriptions view to filter by subscribed creators
+        .select({
+          ...getTableColumns(videos), // Fetch all columns from the videos table
+          user: users, // Include user details of the video owner
+          viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count total views
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "like")
+            )
+          ), // Count likes
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "dislike")
+            )
+          ), // Count dislikes
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table
+        .innerJoin(
+          viewerSubscriptions,
+          eq(viewerSubscriptions.userId, users.id)
+        )
+        .where(
+          and(
+            eq(videos.visibility, "public"), // Ensure the video is publicly visible
+            cursor
+              ? or(
+                  lt(videos.updatedAt, cursor.updatedAt), // Get videos with an older update timestamp
+                  and(
+                    eq(videos.updatedAt, cursor.updatedAt), // If same timestamp, use ID as tiebreaker
+                    lt(videos.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor, fetch the most recent videos
+          )
+        )
+        .orderBy(desc(videos.updatedAt), desc(videos.id)) // Order by most recent first, using ID as tiebreaker
+        .limit(limit + 1); // Fetch one extra record to check if there's more data
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if there is more data
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      // Return the fetched items along with the next cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  // Fetch trending videos with pagination
+  // This query retrieves publicly visible videos and ranks them by view count
+  getManyTrending: baseProcedure
+    .input(
+      z.object({
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            viewCount: z.number(), // View count of the last fetched video for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Limit number of videos per request
+      })
+    )
+    .query(async ({ input }) => {
+      const { cursor, limit } = input;
+
+      const viewCountSubquery = db.$count(
+        videoViews,
+        eq(videoViews.videoId, videos.id)
+      ); // Subquery to calculate total views for each video
+
+      // Query database to fetch trending videos based on view count
+      const data = await db
+        .select({
+          ...getTableColumns(videos), // Fetch all columns from the videos table
+          user: users, // Include user details of the video owner
+          viewCount: viewCountSubquery, // Count total views
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "like")
+            )
+          ), // Count likes
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "dislike")
+            )
+          ), // Count dislikes
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table
+        .where(
+          and(
+            eq(videos.visibility, "public"), // Ensure the video is publicly visible
+            cursor
+              ? or(
+                  lt(viewCountSubquery, cursor.viewCount), // Get videos with a lower view count
+                  and(
+                    eq(viewCountSubquery, cursor.viewCount), // If same view count, use ID as tiebreaker
+                    lt(videos.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor, fetch the most popular videos first
+          )
+        )
+        .orderBy(desc(viewCountSubquery), desc(videos.id)) // Order by most viewed first, using ID as a tiebreaker
+        .limit(limit + 1); // Fetch one extra record to check if there's more data
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if there is more data
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            viewCount: lastItem.viewCount,
+          }
+        : null;
+
+      // Return the fetched items along with the next cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  // Fetch multiple videos with pagination, filtering by optional query or category
+  // This query is used for loading home page videos. It retrieves public videos
+  getMany: baseProcedure
+    .input(
+      z.object({
+        categoryId: z.string().uuid().nullish(), // Category ID to filter videos by category (optional)
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            updatedAt: z.date(), // Timestamp of the last fetched video for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Limit number of videos per request
+      })
+    )
+    .query(async ({ input }) => {
+      const { cursor, limit, categoryId } = input;
+
+      // Query database to fetch videos with optional search query and category filter
+      const data = await db
+        .select({
+          ...getTableColumns(videos), // Fetch all columns from the videos table
+          user: users, // Include user details of the video owner
+          viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count total views
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "like")
+            )
+          ), // Count likes
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "dislike")
+            )
+          ), // Count dislikes
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table
+        .where(
+          and(
+            eq(videos.visibility, "public"), // Ensure the video is publicly visible
+            categoryId ? eq(videos.categoryId, categoryId) : undefined, // Filter videos by category (if provided)
+            cursor
+              ? or(
+                  lt(videos.updatedAt, cursor.updatedAt), // Get videos with an older update timestamp
+                  and(
+                    eq(videos.updatedAt, cursor.updatedAt), // If same timestamp, use ID as tiebreaker
+                    lt(videos.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor, fetch the most recent videos
+          )
+        )
+        .orderBy(desc(videos.updatedAt), desc(videos.id)) // Order by most recent first, using ID as tiebreaker
+        .limit(limit + 1); // Fetch one extra record to check if there's more data
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if there is more data
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      // Return the fetched items along with the next cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
   // Fetch a single video by its ID, including associated user details
   getOne: baseProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
@@ -103,6 +369,7 @@ export const videosRouter = createTRPCRouter({
 
       return existingVideo; // Return the fetched video details
     }),
+
   // Trigger workflow to generate a video description
   generateDescription: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
@@ -132,6 +399,7 @@ export const videosRouter = createTRPCRouter({
 
       return workflowRunId; // Return the workflow run ID
     }),
+
   // Updates the video status by revalidating its upload status from Mux
   revalidate: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
@@ -185,6 +453,7 @@ export const videosRouter = createTRPCRouter({
 
       return updatedVideo; // Return the updated video details
     }),
+
   // Restore the video's thumbnail using the Mux thumbnail
   restoreThumbnail: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID
@@ -242,6 +511,7 @@ export const videosRouter = createTRPCRouter({
 
       return updatedVideo; // Return the updated video record with the new thumbnail
     }),
+
   // Remove a video from the database
   remove: protectedProcedure
     .input(z.object({ id: z.string().uuid() })) // Validate input as a UUID

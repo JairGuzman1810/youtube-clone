@@ -11,30 +11,30 @@ import { useAuth, useClerk } from "@clerk/nextjs"; // Authentication hooks from 
 import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react"; // Icons
 import Link from "next/link"; // Next.js link component
 
-// Main navigation items
+// Main navigation items - Defines an array of objects representing the navigation links in the sidebar
 const items = [
   {
-    title: "Home",
-    url: "/",
-    icon: HomeIcon,
+    title: "Home", // Name of the link
+    url: "/", // URL to navigate to
+    icon: HomeIcon, // Icon to display for the link
   },
   {
-    title: "Subscriptions",
-    url: "/feed/subscriptions",
-    icon: PlaySquareIcon,
-    auth: true, // Requires authentication
+    title: "Subscribed", // Name of the link
+    url: "/feed/subscribed", // URL to navigate to
+    icon: PlaySquareIcon, // Icon to display for the link
+    auth: true, // Requires authentication to access this link
   },
   {
-    title: "Trending",
-    url: "/feed/trending",
-    icon: FlameIcon,
+    title: "Trending", // Name of the link
+    url: "/feed/trending", // URL to navigate to
+    icon: FlameIcon, // Icon to display for the link
   },
 ];
 
 // Main navigation section inside the sidebar
 export const MainSection = () => {
-  const clerk = useClerk();
-  const { isSignedIn } = useAuth(); // Check if the user is signed in
+  const clerk = useClerk(); // Clerk instance for authentication actions
+  const { isSignedIn } = useAuth(); // Hook to check if the user is signed in
 
   return (
     <SidebarGroup>
@@ -53,6 +53,7 @@ export const MainSection = () => {
                   }
                 }}
               >
+                {/* Navigates to the specified URL */}
                 <Link href={item.url} className="flex items-center gap-4">
                   <item.icon />
                   <span className="text-sm">{item.title}</span>

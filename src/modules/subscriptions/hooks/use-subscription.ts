@@ -23,7 +23,8 @@ export const useSubscriptions = ({
     onSuccess: () => {
       toast.success("Subscribed"); // Show success message
 
-      // TODO: Invalidate subscriptions.getMany, users.getOne
+      // Invalidate the cache for subscribed videos to refresh the list after subscribing
+      utils.videos.getManySubscribed.invalidate();
 
       if (fromVideoId) {
         utils.videos.getOne.invalidate({ id: fromVideoId }); // Invalidate video cache if triggered from a video
@@ -42,6 +43,9 @@ export const useSubscriptions = ({
   const unsubscribe = trpc.subscriptions.remove.useMutation({
     onSuccess: () => {
       toast.success("Unsubscribed"); // Show success message
+
+      // Invalidate the cache for subscribed videos to refresh the list after unsubscribing
+      utils.videos.getManySubscribed.invalidate();
 
       if (fromVideoId) {
         utils.videos.getOne.invalidate({ id: fromVideoId }); // Invalidate video cache if triggered from a video
