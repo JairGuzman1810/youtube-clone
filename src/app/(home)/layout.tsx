@@ -1,6 +1,9 @@
 import { HomeLayout } from "@/modules/home/ui/layouts/home-layout";
 import { TRPCProvider } from "@/trpc/client";
 
+// Enforce dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 // Define the props interface for the layout component
 interface LayoutProps {
   children: React.ReactNode; // Accepts React nodes as children

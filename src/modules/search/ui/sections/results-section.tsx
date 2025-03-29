@@ -3,8 +3,14 @@
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { DEFAULT_LIMIT } from "@/constants";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { VideoGridCard } from "@/modules/videos/ui/components/video-grid-card";
-import { VideoRowCard } from "@/modules/videos/ui/components/video-row-card";
+import {
+  VideoGridCard,
+  VideoGridCardSkeleton,
+} from "@/modules/videos/ui/components/video-grid-card";
+import {
+  VideoRowCard,
+  VideoRowCardSkeleton,
+} from "@/modules/videos/ui/components/video-row-card";
 import { trpc } from "@/trpc/client";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -16,13 +22,36 @@ interface ResultSectionProps {
 }
 
 // ResultsSection - Main component for rendering search results with infinite scroll
-export const ResultsSection = ({ query, categoryId }: ResultSectionProps) => {
+export const ResultsSection = (props: ResultSectionProps) => {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense
+      key={`${props.query}-${props.categoryId}`}
+      fallback={<ResultsSectionSkeleton />}
+    >
       <ErrorBoundary fallback={<p>Error...</p>}>
-        <ResultsSectionSuspense query={query} categoryId={categoryId} />
+        <ResultsSectionSuspense {...props} />
       </ErrorBoundary>
     </Suspense>
+  );
+};
+
+// ResultsSectionSkeleton - Displays loading skeletons while search results are fetching
+const ResultsSectionSkeleton = () => {
+  return (
+    <>
+      {/* Skeleton loaders for larger screens (row layout) */}
+      <div className="hidden flex-col gap-4 md:flex">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <VideoRowCardSkeleton key={index} />
+        ))}
+      </div>
+      {/* Skeleton loaders for mobile screens (grid layout) */}
+      <div className="flex flex-col gap-4 p-4 gap-y-10 pt-6 md:hidden">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <VideoGridCardSkeleton key={index} />
+        ))}
+      </div>
+    </>
   );
 };
 

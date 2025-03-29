@@ -29,10 +29,8 @@ export const VideoMenu = ({
 }: VideoMenuProps) => {
   // Copies the video URL to the clipboard and shows a success notification
   const onShare = () => {
-    // TODO: Change URL if deploying outside of VERCEL
-    // Constructs the full video URL using the VERCEL_URL environment variable
-    // Falls back to localhost for local development
-    const fullUrl = `${APP_URL || "http://localhost:3000"}/videos/${videoId}`;
+    // Constructs the full video URL using the APP_URL constant
+    const fullUrl = `${APP_URL}/videos/${videoId}`;
 
     // Copies the video URL to the user's clipboard
     navigator.clipboard.writeText(fullUrl);

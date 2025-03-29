@@ -1,6 +1,9 @@
 import { VideoView } from "@/modules/studio/ui/views/video-view";
 import { HydrateClient, trpc } from "@/trpc/server";
 
+// Enforce dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 // Defines the expected structure of route parameters
 interface PageProps {
   params: Promise<{ videoId: string }>;

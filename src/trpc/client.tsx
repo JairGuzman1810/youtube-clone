@@ -36,8 +36,7 @@ function getQueryClient() {
 function getUrl() {
   const base = (() => {
     if (typeof window !== "undefined") return ""; // Use relative URL in browser
-    if (APP_URL) return `https://${APP_URL}`; // Use Vercel deployment URL
-    return "http://localhost:3000"; // Fallback for local development
+    return APP_URL; // A constant that stores the application's base URL
   })();
   return `${base}/api/trpc`; // Append TRPC endpoint
 }

@@ -3,30 +3,38 @@
 import { Button } from "@/components/ui/button";
 import { APP_URL } from "@/constants";
 import { SearchIcon, XIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 // SearchInput component - Handles user search input functionality, redirects to search results page
 export const SearchInput = () => {
-  const router = useRouter();
-  const [value, setValue] = useState("");
+  const router = useRouter(); // Router instance for programmatic navigation
+  const searchParams = useSearchParams(); // Retrieves the current URL search parameters
+
+  // Extracts existing search parameters from the URL
+  const query = searchParams.get("query") || ""; // Retrieves the current search query (if any)
+  const categoryId = searchParams.get("categoryId") || ""; // Retrieves the selected category ID (if any)
+
+  const [value, setValue] = useState(query); // State for handling search input value
 
   // Handles the search form submission, redirects to the search results page with query
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Constructs the URL for search with query parameter
-    const url = new URL(
-      "/search",
-      APP_URL ? `https://${APP_URL}` : "http://localhost:3000"
-    );
-    const newQuery = value.trim();
+    const url = new URL("/search", APP_URL);
+
+    const newQuery = value.trim(); // Trim whitespace from the search input
 
     // Sets the query parameter if not empty, otherwise removes it
     url.searchParams.set("query", encodeURIComponent(newQuery));
 
+    if (categoryId) {
+      url.searchParams.set("categoryId", categoryId); // Preserve the selected category filter
+    }
+
     if (newQuery === "") {
-      url.searchParams.delete("query");
+      url.searchParams.delete("query"); // Remove the query parameter if empty
     }
 
     setValue(newQuery); // Update the value state

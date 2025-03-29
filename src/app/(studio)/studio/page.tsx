@@ -1,6 +1,10 @@
 import { DEFAULT_LIMIT } from "@/constants";
 import { StudioView } from "@/modules/studio/ui/views/studio-view";
 import { HydrateClient, trpc } from "@/trpc/server";
+
+// Enforce dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 // Define the Studio page component
 const Page = async () => {
   // Prefetch studio data with infinite pagination for better performance

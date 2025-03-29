@@ -225,7 +225,7 @@ const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
   };
 
   // Construct full URL for video link
-  const fullUrl = `${APP_URL || "http://localhost:3000"}/videos/${videoId}`;
+  const fullUrl = `${APP_URL}/videos/${videoId}`;
 
   const [isCopied, setIsCopied] = useState(false); // State for copy button feedback
 
