@@ -6,10 +6,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"; // Sidebar UI components
-import { useAuth, useClerk } from "@clerk/nextjs"; // Authentication hooks from Clerk
-import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react"; // Icons
-import Link from "next/link"; // Next.js link component
+} from "@/components/ui/sidebar";
+import { useAuth, useClerk } from "@clerk/nextjs";
+import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 // Main navigation items - Defines an array of objects representing the navigation links in the sidebar
 const items = [
@@ -31,10 +32,11 @@ const items = [
   },
 ];
 
-// Main navigation section inside the sidebar
+// Main navigation section inside the sidebar - Displays main navigation links
 export const MainSection = () => {
-  const clerk = useClerk(); // Clerk instance for authentication actions
+  const clerk = useClerk(); // Clerk instance for handling authentication actions
   const { isSignedIn } = useAuth(); // Hook to check if the user is signed in
+  const pathname = usePathname(); // Get the current path to highlight active menu items
 
   return (
     <SidebarGroup>
@@ -43,19 +45,21 @@ export const MainSection = () => {
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
-                tooltip={item.title}
+                tooltip={item.title} // Show tooltip with the item title
                 asChild
-                isActive={false} // TODO: Update logic to check the current pathname
+                isActive={pathname === item.url} // Highlight active menu item based on current path
                 onClick={(e) => {
                   if (!isSignedIn && item.auth) {
-                    e.preventDefault();
+                    e.preventDefault(); // Prevent navigation if not signed in and authentication is required
                     return clerk.openSignIn(); // Prompt sign-in if required
                   }
                 }}
               >
                 {/* Navigates to the specified URL */}
                 <Link href={item.url} className="flex items-center gap-4">
+                  {/* Render the icon */}
                   <item.icon />
+                  {/* Render the title */}
                   <span className="text-sm">{item.title}</span>
                 </Link>
               </SidebarMenuButton>

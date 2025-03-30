@@ -29,7 +29,7 @@ export const VideoReactions = ({
   const like = trpc.videoReactions.like.useMutation({
     onSuccess: () => {
       utils.videos.getOne.invalidate({ id: videoId }); // Invalidate cached video data to refresh UI
-      // TODO: Invalidate "liked" playlist
+      utils.playlists.getLiked.invalidate(); // Invalidate the liked playlist cache to reflect the new like
     },
     onError: (error) => {
       toast.error("Something went wrong"); // Display error toast notification
@@ -43,7 +43,7 @@ export const VideoReactions = ({
   const dislike = trpc.videoReactions.dislike.useMutation({
     onSuccess: () => {
       utils.videos.getOne.invalidate({ id: videoId }); // Invalidate cached video data to refresh UI
-      // TODO: Invalidate "liked" playlist
+      utils.playlists.getLiked.invalidate(); // Invalidate the liked playlist cache to remove the disliked video
     },
     onError: (error) => {
       toast.error("Something went wrong"); // Display error toast notification

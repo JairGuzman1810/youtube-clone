@@ -2,7 +2,6 @@
 
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { DEFAULT_LIMIT } from "@/constants";
-import { useIsMobile } from "@/hooks/use-mobile";
 import {
   VideoGridCard,
   VideoGridCardSkeleton,
@@ -57,8 +56,6 @@ const ResultsSectionSkeleton = () => {
 
 // ResultsSectionSuspense - Handles fetching and rendering of search results
 const ResultsSectionSuspense = ({ query, categoryId }: ResultSectionProps) => {
-  const isMobile = useIsMobile(); // Determines if the user is on a mobile device
-
   // Fetching search results using TRPC infinite query
   const [results, resultsQuery] = trpc.search.getMany.useSuspenseInfiniteQuery(
     { query, categoryId, limit: DEFAULT_LIMIT },
@@ -68,24 +65,21 @@ const ResultsSectionSuspense = ({ query, categoryId }: ResultSectionProps) => {
   return (
     <>
       {/* Renders search results in a grid layout for mobile users */}
-      {isMobile ? (
-        <div className="flex flex-col gap-4 gap-y-10">
-          {results.pages
-            .flatMap((page) => page.items) // Flattens paginated results into a single array
-            .map((video) => (
-              <VideoGridCard key={video.id} data={video} /> // Renders each video as a grid card
-            ))}
-        </div>
-      ) : (
-        // Renders search results in a row layout for non-mobile users
-        <div className="flex flex-col gap-4">
-          {results.pages
-            .flatMap((page) => page.items) // Flattens paginated results into a single array
-            .map((video) => (
-              <VideoRowCard key={video.id} data={video} /> // Renders each video as a row card
-            ))}
-        </div>
-      )}
+      <div className="flex flex-col gap-4 gap-y-10 md:hidden">
+        {results.pages
+          .flatMap((page) => page.items) // Flattens paginated results into a single array
+          .map((video) => (
+            <VideoGridCard key={video.id} data={video} /> // Renders each video as a grid card
+          ))}
+      </div>
+      {/* Renders search results in a row layout for non-mobile users*/}
+      <div className="hidden flex-col gap-4 md:flex">
+        {results.pages
+          .flatMap((page) => page.items) // Flattens paginated results into a single array
+          .map((video) => (
+            <VideoRowCard key={video.id} data={video} /> // Renders each video as a row card
+          ))}
+      </div>
       {/* Infinite scroll component to load more results */}
       <InfiniteScroll
         hasNextPage={resultsQuery.hasNextPage} // Checks if there are more pages to load
