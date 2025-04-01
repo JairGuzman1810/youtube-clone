@@ -6,12 +6,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { APP_URL } from "@/constants";
+import { PlaylistAddModal } from "@/modules/playlists/ui/components/playlist-add-modal";
 import {
   ListPlusIcon,
   MoreVerticalIcon,
   ShareIcon,
   Trash2Icon,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 // VideoMenuProps - Defines the props for the VideoMenu component
@@ -27,6 +29,9 @@ export const VideoMenu = ({
   variant = "ghost",
   onRemove,
 }: VideoMenuProps) => {
+  // State to control the visibility of the "Add to Playlist" modal
+  const [isOpenPlaylistAddModal, setIsOpenPlaylistAddModal] = useState(false);
+
   // Copies the video URL to the clipboard and shows a success notification
   const onShare = () => {
     // Constructs the full video URL using the APP_URL constant
@@ -40,33 +45,43 @@ export const VideoMenu = ({
   };
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={"icon"} className="rounded-full">
-          <MoreVerticalIcon />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-        {/* Share video option */}
-        <DropdownMenuItem onClick={onShare}>
-          <ShareIcon className="mr-2 size-4" />
-          Share
-        </DropdownMenuItem>
+    <>
+      {/* Modal for adding the video to a playlist */}
+      <PlaylistAddModal
+        open={isOpenPlaylistAddModal}
+        onOpenChange={setIsOpenPlaylistAddModal}
+        videoId={videoId}
+      />
 
-        {/* Add to playlist option */}
-        <DropdownMenuItem onClick={() => {}}>
-          <ListPlusIcon className="mr-2 size-4" />
-          Add to playlist
-        </DropdownMenuItem>
-
-        {/* Remove video option (if onRemove is provided) */}
-        {onRemove && (
-          <DropdownMenuItem onClick={() => {}}>
-            <Trash2Icon className="mr-2 size-4" />
-            Remove
+      {/* Dropdown menu with video actions */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant={variant} size={"icon"} className="rounded-full">
+            <MoreVerticalIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          {/* Share video option */}
+          <DropdownMenuItem onClick={onShare}>
+            <ShareIcon className="mr-2 size-4" />
+            Share
           </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+
+          {/* Add to playlist option */}
+          <DropdownMenuItem onClick={() => setIsOpenPlaylistAddModal(true)}>
+            <ListPlusIcon className="mr-2 size-4" />
+            Add to playlist
+          </DropdownMenuItem>
+
+          {/* Remove video option (if onRemove is provided) */}
+          {onRemove && (
+            <DropdownMenuItem onClick={() => {}}>
+              <Trash2Icon className="mr-2 size-4" />
+              Remove
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 };

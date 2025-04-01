@@ -9,11 +9,205 @@ import {
 } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, getTableColumns, lt, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Define the TRPC router for handling video playlists
 export const playlistsRouter = createTRPCRouter({
+  // Remove a video from an existing playlist for the authenticated user
+  removeVideo: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.string().uuid(), // ID of the playlist from which the video should be removed
+        videoId: z.string().uuid(), // ID of the video to be removed
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { playlistId, videoId } = input; // Extract playlist and video IDs from input
+      const { id: userId } = ctx.user; // Extract user ID from request context
+
+      // Check if the playlist exists and belongs to the authenticated user
+      const [existingPlaylist] = await db
+        .select()
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!existingPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the playlist is not found
+      }
+
+      // Check if the video exists in the database
+      const [existingVideo] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, videoId));
+
+      if (!existingVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the video is not found
+      }
+
+      // Check if the video is actually in the playlist before attempting to remove it
+      const [existingPlaylistVideo] = await db
+        .select()
+        .from(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.playlistId, playlistId),
+            eq(playlistVideos.videoId, videoId)
+          )
+        );
+
+      if (!existingPlaylistVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the video is not in the playlist
+      }
+
+      // Remove the video from the playlist
+      const [deletedPlaylistVideo] = await db
+        .delete(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.playlistId, playlistId),
+            eq(playlistVideos.videoId, videoId)
+          )
+        )
+        .returning();
+
+      return deletedPlaylistVideo; // Return the deleted playlist-video relationship
+    }),
+
+  // Add a video to an existing playlist for the authenticated user
+  addVideo: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.string().uuid(), // ID of the playlist where the video should be added
+        videoId: z.string().uuid(), // ID of the video to be added to the playlist
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { playlistId, videoId } = input; // Extract playlist and video IDs from input
+      const { id: userId } = ctx.user; // Extract user ID from request context
+
+      // Check if the playlist exists and belongs to the authenticated user
+      const [existingPlaylist] = await db
+        .select()
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!existingPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the playlist is not found
+      }
+
+      // Check if the video exists in the database
+      const [existingVideo] = await db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, videoId));
+
+      if (!existingVideo) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the video is not found
+      }
+
+      // Check if the video is already in the playlist to prevent duplicates
+      const [existingPlaylistVideo] = await db
+        .select()
+        .from(playlistVideos)
+        .where(
+          and(
+            eq(playlistVideos.playlistId, playlistId),
+            eq(playlistVideos.videoId, videoId)
+          )
+        );
+
+      if (existingPlaylistVideo) {
+        throw new TRPCError({ code: "CONFLICT" }); // Return an error if the video is already in the playlist
+      }
+
+      // Add the video to the playlist
+      const [createdPlaylistVideo] = await db
+        .insert(playlistVideos)
+        .values({ playlistId, videoId })
+        .returning();
+
+      return createdPlaylistVideo; // Return the newly added playlist-video relationship
+    }),
+
+  // Fetch all playlists created by the user that may contain a specific video, with pagination support
+  getManyForVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string().uuid(), // ID of the video to check for inclusion in playlists
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            updatedAt: z.date(), // Timestamp of the last fetched playlist for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Number of playlists to fetch per request
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { id: userId } = ctx.user; // Extract user ID from request context
+      const { videoId, cursor, limit } = input; // Extract video ID and pagination parameters from input
+
+      // Query the database to fetch user playlists along with metadata
+      const data = await db
+        .select({
+          ...getTableColumns(playlists), // Fetch all columns from the playlists table
+          videoCount: db.$count(
+            playlistVideos,
+            eq(playlists.id, playlistVideos.playlistId)
+          ), // Count the number of videos in each playlist
+          user: users, // Fetch the user who owns the playlist
+          containsVideo: videoId
+            ? sql<boolean>`(
+            SELECT EXISTS (
+              SELECT 1 
+              FROM ${playlistVideos} pv 
+              WHERE pv.playlist_id = ${playlists.id} AND pv.video_id = ${videoId}
+            )
+          )` // Check if the playlist contains the specified video
+            : sql<boolean>`false`, // Default to false if no video ID is provided
+        })
+        .from(playlists)
+        .innerJoin(users, eq(playlists.userId, users.id)) // Join playlists with the users table to get owner details
+        .where(
+          and(
+            eq(playlists.userId, userId), // Filter playlists to only those owned by the current user
+            cursor
+              ? or(
+                  lt(playlists.updatedAt, cursor.updatedAt), // Fetch older playlists based on updatedAt timestamp
+                  and(
+                    eq(playlists.updatedAt, cursor.updatedAt), // If timestamps match, use ID as a tiebreaker
+                    lt(playlists.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor is provided, fetch the most recent playlists
+          )
+        )
+        .orderBy(desc(playlists.updatedAt), desc(playlists.id)) // Order by most recent updates first, using ID as a tiebreaker
+        .limit(limit + 1); // Fetch one extra record to determine if there are more pages available
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if more data is available
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      // Return the fetched playlists along with the pagination cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
   // Fetch all playlists created by the user with pagination support
   getMany: protectedProcedure
     .input(
@@ -40,6 +234,14 @@ export const playlistsRouter = createTRPCRouter({
             eq(playlists.id, playlistVideos.playlistId)
           ), // Count the number of videos in each playlist
           user: users, // Fetch the user who owns the playlist
+          thumbnailUrl: sql<string | null>`(
+          SELECT v.thumbnail_url
+          FROM ${playlistVideos} pv
+          JOIN ${videos} v ON v.id = pv.video_id
+          WHERE pv.playlist_id = ${playlists.id}
+          ORDER BY pv.updated_at DESC
+          LIMIT 1
+        )`, // Fetch the most recent video's thumbnail from the playlist
         })
         .from(playlists)
         .innerJoin(users, eq(playlists.userId, users.id)) // Join playlists with users table to get owner details
