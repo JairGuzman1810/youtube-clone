@@ -20,6 +20,71 @@ import {
 export const reactionType = pgEnum("reaction_type", ["like", "dislike"]);
 
 // ========================
+// PLAYLIST VIDEOS TABLE DEFINITION
+// ========================
+export const playlistVideos = pgTable(
+  "playlist_videos", // Table name: "playlist_videos"
+  {
+    playlistId: uuid("playlist_id")
+      .references(() => playlists.id, {
+        onDelete: "cascade",
+      }) // Foreign key linking to the associated playlist
+      .notNull(),
+    videoId: uuid("video_id")
+      .references(() => videos.id, {
+        onDelete: "cascade",
+      }) // Foreign key linking to the associated video
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Auto-filled timestamp on creation
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Auto-filled timestamp on update
+  },
+  (t) => [
+    primaryKey({
+      name: "playlist_videos_pk",
+      columns: [t.playlistId, t.videoId], // Composite primary key (playlistId, videoId) ensures unique video entries in a playlist
+    }),
+  ]
+);
+
+// Define relationships for playlist videos
+export const playlistVideoRelations = relations(playlistVideos, ({ one }) => ({
+  playlist: one(playlists, {
+    fields: [playlistVideos.playlistId],
+    references: [playlists.id],
+  }), // A playlist video entry belongs to one playlist
+  video: one(videos, {
+    fields: [playlistVideos.videoId],
+    references: [videos.id],
+  }), // A playlist video entry is associated with one video
+}));
+
+// ========================
+// PLAYLISTS TABLE DEFINITION
+// ========================
+export const playlists = pgTable(
+  "playlists", // Table name: "playlists"
+  {
+    id: uuid("id").primaryKey().defaultRandom(), // Primary key with a random UUID
+    name: text("name").notNull(), // Playlist name
+    description: text("description"), // Optional playlist description
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" }) // Foreign key linking to the user who owns the playlist
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(), // Auto-filled timestamp on creation
+    updatedAt: timestamp("updated_at").defaultNow().notNull(), // Auto-filled timestamp on update
+  }
+);
+
+// Define relationships for playlists
+export const playlistRelations = relations(playlists, ({ one, many }) => ({
+  user: one(users, {
+    fields: [playlists.userId],
+    references: [users.id],
+  }), // A playlist belongs to one user
+  playlistVideos: many(playlistVideos), // A playlist can contain multiple videos
+}));
+
+// ========================
 // USERS TABLE DEFINITION
 // ========================
 export const users = pgTable(
@@ -49,6 +114,7 @@ export const userRelations = relations(users, ({ many }) => ({
   }),
   comments: many(comments), // One user can post multiple comments
   commentReactions: many(commentReactions), // One user can react to multiple comments (likes/dislikes)
+  playlists: many(playlists), // One user can create multiple playlists
 }));
 
 // ========================
@@ -169,6 +235,7 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
   views: many(videoViews), // A video can have multiple views
   reactions: many(videoReactions), // A video can have multiple reactions
   comments: many(comments), // A video can have multiple comments
+  playlistVideos: many(playlistVideos), // A video can be added to multiple playlists
 }));
 
 // ========================

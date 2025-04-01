@@ -1,11 +1,110 @@
 import { db } from "@/db";
-import { users, videoReactions, videos, videoViews } from "@/db/schema";
+import {
+  playlists,
+  playlistVideos,
+  users,
+  videoReactions,
+  videos,
+  videoViews,
+} from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { TRPCError } from "@trpc/server";
 import { and, desc, eq, getTableColumns, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 // Define the TRPC router for handling video playlists
 export const playlistsRouter = createTRPCRouter({
+  // Fetch all playlists created by the user with pagination support
+  getMany: protectedProcedure
+    .input(
+      z.object({
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            updatedAt: z.date(), // Timestamp of the last fetched playlist for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Limit number of playlists per request
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { id: userId } = ctx.user; // Extract user ID from request context
+      const { cursor, limit } = input; // Extract pagination parameters from input
+
+      // Query database to fetch user playlists along with metadata
+      const data = await db
+        .select({
+          ...getTableColumns(playlists), // Fetch all columns from the playlists table
+          videoCount: db.$count(
+            playlistVideos,
+            eq(playlists.id, playlistVideos.playlistId)
+          ), // Count the number of videos in each playlist
+          user: users, // Fetch the user who owns the playlist
+        })
+        .from(playlists)
+        .innerJoin(users, eq(playlists.userId, users.id)) // Join playlists with users table to get owner details
+        .where(
+          and(
+            eq(playlists.userId, userId), // Filter by the current user's playlists
+            cursor
+              ? or(
+                  lt(playlists.updatedAt, cursor.updatedAt), // Fetch older playlists based on updatedAt timestamp
+                  and(
+                    eq(playlists.updatedAt, cursor.updatedAt), // If same timestamp, use ID as tiebreaker
+                    lt(playlists.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor, fetch the most recent playlists
+          )
+        )
+        .orderBy(desc(playlists.updatedAt), desc(playlists.id)) // Order by most recent updates first, using ID as tiebreaker
+        .limit(limit + 1); // Fetch one extra record to check if there's more data
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if there is more data
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      // Return the fetched items along with the next cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  // Create a new playlist for the authenticated user
+  create: protectedProcedure
+    .input(z.object({ name: z.string().min(1) })) // Validate that the playlist name is provided
+    .mutation(async ({ input, ctx }) => {
+      const { name } = input; // Extract playlist name from input
+      const { id: userId } = ctx.user; // Extract user ID from request context
+
+      // Insert the new playlist into the database
+      const [createdPlaylist] = await db
+        .insert(playlists)
+        .values({
+          userId, // Assign the playlist to the authenticated user
+          name, // Set the provided playlist name
+        })
+        .returning(); // Return the created playlist
+
+      // Throw an error if the playlist creation failed
+      if (!createdPlaylist) {
+        throw new TRPCError({ code: "BAD_REQUEST" });
+      }
+
+      return createdPlaylist; // Return the successfully created playlist
+    }),
+
   // Fetch liked videos for a user with pagination support
   getLiked: protectedProcedure
     .input(
