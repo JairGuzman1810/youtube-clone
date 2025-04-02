@@ -19,7 +19,7 @@ export const PlaylistAddModal = ({
   onOpenChange,
   videoId,
 }: PlaylistAddModalProps) => {
-  const utils = trpc.useUtils();
+  const utils = trpc.useUtils(); // Utility functions for cache management
 
   // Fetches the user's playlists with pagination support, checking if the video is already in them
   const {
@@ -41,10 +41,14 @@ export const PlaylistAddModal = ({
 
   // Mutation to add a video to a playlist
   const addVideo = trpc.playlists.addVideo.useMutation({
-    onSuccess: () => {
-      toast.success("Video added to playlist");
-      utils.playlists.getMany.invalidate(); // Invalidate cached playlist data
-      utils.playlists.getManyForVideo.invalidate({ videoId });
+    onSuccess: (data) => {
+      toast.success("Video added to playlist"); // Show success notification
+
+      // Invalidate related TRPC queries to refresh playlist data
+      utils.playlists.getMany.invalidate(); // Refresh the list of playlists
+      utils.playlists.getManyForVideo.invalidate({ videoId }); // Refresh playlists associated with this video
+      utils.playlists.getOne.invalidate({ id: data.playlistId }); // Refresh the specific playlist
+      utils.playlists.getVideos.invalidate({ playlistId: data.playlistId }); // Refresh videos in the playlist
     },
     onError: () => {
       toast.error("Something went wrong");
@@ -53,10 +57,14 @@ export const PlaylistAddModal = ({
 
   // Mutation to remove a video from a playlist
   const removeVideo = trpc.playlists.removeVideo.useMutation({
-    onSuccess: () => {
-      toast.success("Video removed from playlist");
-      utils.playlists.getMany.invalidate(); // Invalidate cached playlist data
-      utils.playlists.getManyForVideo.invalidate({ videoId });
+    onSuccess: (data) => {
+      toast.success("Video removed from playlist"); // Show success notification
+
+      // Invalidate related TRPC queries to refresh playlist data
+      utils.playlists.getMany.invalidate(); // Refresh the list of playlists
+      utils.playlists.getManyForVideo.invalidate({ videoId }); // Refresh playlists associated with this video
+      utils.playlists.getOne.invalidate({ id: data.playlistId }); // Refresh the specific playlist
+      utils.playlists.getVideos.invalidate({ playlistId: data.playlistId }); // Refresh videos in the playlist
     },
     onError: () => {
       toast.error("Something went wrong");

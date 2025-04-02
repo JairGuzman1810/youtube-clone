@@ -14,6 +14,158 @@ import { z } from "zod";
 
 // Define the TRPC router for handling video playlists
 export const playlistsRouter = createTRPCRouter({
+  // Remove a playlist owned by the authenticated user
+  remove: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(), // Playlist ID to be removed
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { id } = input; // Extract playlist ID from input
+      const { id: userId } = ctx.user; // Extract user ID from request context
+
+      // Delete the playlist if it belongs to the authenticated user
+      const [deletedPlaylist] = await db
+        .delete(playlists)
+        .where(and(eq(playlists.id, id), eq(playlists.userId, userId)))
+        .returning();
+
+      if (!deletedPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the playlist is not found
+      }
+
+      return deletedPlaylist; // Return the deleted playlist details
+    }),
+
+  // Fetch a single playlist by ID for the authenticated user
+  getOne: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(), // Playlist ID to retrieve
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { id } = input; // Extract playlist ID from input
+      const { id: userId } = ctx.user; // Extract user ID from request context
+
+      // Query the database to find the playlist belonging to the user
+      const [existingPlaylist] = await db
+        .select()
+        .from(playlists)
+        .where(and(eq(playlists.id, id), eq(playlists.userId, userId)));
+
+      if (!existingPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the playlist is not found
+      }
+
+      return existingPlaylist; // Return the retrieved playlist details
+    }),
+
+  // Fetch videos from a playlist with pagination support
+  getVideos: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.string().uuid(), // ID of the playlist to fetch videos from
+        cursor: z
+          .object({
+            id: z.string().uuid(), // Cursor ID (UUID format) for pagination
+            updatedAt: z.date(), // Timestamp of the last fetched video for pagination
+          })
+          .nullish(), // Cursor can be null (first page)
+        limit: z.number().min(1).max(100), // Number of videos to fetch per request
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { id: userId } = ctx.user; // Extract user ID from request context
+      const { playlistId, cursor, limit } = input; // Extract input parameters
+
+      // Verify that the playlist exists and belongs to the authenticated user
+      const [existingPlaylist] = await db
+        .select()
+        .from(playlists)
+        .where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId)));
+
+      if (!existingPlaylist) {
+        throw new TRPCError({ code: "NOT_FOUND" }); // Return an error if the playlist is not found
+      }
+
+      // Define a temporary table to store video IDs in the playlist
+      const videosFromPlaylist = db.$with("playlist_videos").as(
+        db
+          .select({
+            videoId: playlistVideos.videoId,
+          })
+          .from(playlistVideos)
+          .where(eq(playlistVideos.playlistId, playlistId))
+      );
+
+      // Query database to fetch videos from the playlist along with metadata
+      const data = await db
+        .with(videosFromPlaylist) // Include the temporary table of playlist videos
+        .select({
+          ...getTableColumns(videos), // Fetch all columns from the videos table
+          user: users, // Include user details of the video owner
+          viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count total views
+          likeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "like")
+            )
+          ), // Count likes
+          dislikeCount: db.$count(
+            videoReactions,
+            and(
+              eq(videoReactions.videoId, videos.id),
+              eq(videoReactions.type, "dislike")
+            )
+          ), // Count dislikes
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table to get owner details
+        .innerJoin(
+          videosFromPlaylist,
+          eq(videos.id, videosFromPlaylist.videoId) // Join with the playlist videos table
+        )
+        .where(
+          and(
+            eq(videos.visibility, "public"), // Ensure the video is publicly visible
+            cursor
+              ? or(
+                  lt(videos.updatedAt, cursor.updatedAt), // Fetch older videos based on updatedAt timestamp
+                  and(
+                    eq(videos.updatedAt, cursor.updatedAt), // If same timestamp, use ID as tiebreaker
+                    lt(videos.id, cursor.id)
+                  )
+                )
+              : undefined // If no cursor, fetch the most recent videos
+          )
+        )
+        .orderBy(desc(videos.updatedAt), desc(videos.id)) // Order by most recent updates first
+        .limit(limit + 1); // Fetch one extra record to check if there's more data
+
+      const hasMore = data.length > limit; // Determine if more data is available
+
+      // Remove the extra record if there is more data
+      const items = hasMore ? data.slice(0, -1) : data;
+
+      // Determine the next cursor for pagination
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore
+        ? {
+            id: lastItem.id,
+            updatedAt: lastItem.updatedAt,
+          }
+        : null;
+
+      // Return the fetched videos along with the next cursor
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
   // Remove a video from an existing playlist for the authenticated user
   removeVideo: protectedProcedure
     .input(

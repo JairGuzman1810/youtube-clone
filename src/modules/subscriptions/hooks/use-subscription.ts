@@ -16,7 +16,7 @@ export const useSubscriptions = ({
   fromVideoId,
 }: UseSubscriptionProps) => {
   const clerk = useClerk(); // Access Clerk authentication functions
-  const utils = trpc.useUtils(); // TRPC utilities for cache invalidation
+  const utils = trpc.useUtils(); // Utility functions for cache management
 
   // subscribe - Handles subscribing to a user
   const subscribe = trpc.subscriptions.create.useMutation({

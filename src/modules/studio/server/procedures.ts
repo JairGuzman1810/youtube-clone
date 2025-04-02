@@ -1,8 +1,14 @@
 import { db } from "@/db";
-import { videos } from "@/db/schema";
+import {
+  comments,
+  users,
+  videoReactions,
+  videos,
+  videoViews,
+} from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, lt, or } from "drizzle-orm";
 import z from "zod";
 
 // Define the TRPC router for the studio-related API endpoints
@@ -44,8 +50,18 @@ export const studioRouter = createTRPCRouter({
 
       // Query database to fetch videos for the authenticated user
       const data = await db
-        .select()
+        .select({
+          ...getTableColumns(videos), // Fetch all columns from the videos table
+          viewCount: db.$count(videoViews, eq(videoViews.videoId, videos.id)), // Count total views per video
+          commentCount: db.$count(comments, eq(comments.videoId, videos.id)), // Count total comments per video
+          likeCount: db.$count(
+            videoReactions,
+            eq(videoReactions.videoId, videos.id)
+          ), // Count total likes per video
+          user: users, // Include user details of the video owner
+        })
         .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id)) // Join videos with users table to get owner details
         .where(
           and(
             eq(videos.userId, userId), // Filter videos by user ID

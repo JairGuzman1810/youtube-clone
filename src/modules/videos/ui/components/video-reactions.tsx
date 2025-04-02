@@ -23,7 +23,7 @@ export const VideoReactions = ({
   viewerReaction,
 }: VideoReactionsProps) => {
   const clerk = useClerk(); // Access Clerk authentication functions
-  const utils = trpc.useUtils(); // Get TRPC utility functions for cache management
+  const utils = trpc.useUtils(); // Utility functions for cache management
 
   // Mutation to handle liking a video
   const like = trpc.videoReactions.like.useMutation({

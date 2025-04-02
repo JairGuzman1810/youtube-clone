@@ -2,6 +2,9 @@ import { DEFAULT_LIMIT } from "@/constants";
 import { PlaylistsView } from "@/modules/playlists/ui/views/playlists-view";
 import { HydrateClient, trpc } from "@/trpc/server";
 
+// Force dynamic rendering for this page (no static generation)
+export const dynamic = "force-dynamic";
+
 // Async page component that fetches and renders playlists
 const Page = async () => {
   // Pre-fetch playlist data for faster client-side rendering

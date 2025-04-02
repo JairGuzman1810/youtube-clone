@@ -44,7 +44,7 @@ export const CommentItem = ({
   const [isReplyOpen, setIsReplyOpen] = useState(false); // isReplyOpen - Controls whether the reply form is visible
   const [isRepliesOpen, setIsRepliesOpen] = useState(false); // isRepliesOpen - Controls whether the comment's replies are displayed
 
-  const utils = trpc.useUtils(); // Access TRPC utilities for data invalidation and other server-related tasks
+  const utils = trpc.useUtils(); // Utility functions for cache management
 
   // Remove comment mutation - Handles deleting a comment
   const remove = trpc.comments.remove.useMutation({

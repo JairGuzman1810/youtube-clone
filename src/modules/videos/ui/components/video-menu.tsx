@@ -75,7 +75,7 @@ export const VideoMenu = ({
 
           {/* Remove video option (if onRemove is provided) */}
           {onRemove && (
-            <DropdownMenuItem onClick={() => {}}>
+            <DropdownMenuItem onClick={onRemove}>
               <Trash2Icon className="mr-2 size-4" />
               Remove
             </DropdownMenuItem>

@@ -172,16 +172,16 @@ const VideosSectionsSuspense = () => {
                       {format(video.createdAt, "d MMM, yyyy")}
                     </TableCell>
                     <TableCell className="text-right text-sm">
-                      {/* Placeholder for video views count */}
-                      views
+                      {/* Display the total number of views for the video */}
+                      {video.viewCount}
                     </TableCell>
                     <TableCell className="text-right text-sm">
-                      {/* Placeholder for video comments count */}
-                      comments
+                      {/* Display the total number of comments on the video */}
+                      {video.commentCount}
                     </TableCell>
                     <TableCell className="text-right text-sm pr-6">
-                      {/* Placeholder for video likes count */}
-                      likes
+                      {/* Display the total number of likes on the video */}
+                      {video.likeCount}
                     </TableCell>
                   </TableRow>
                 </Link>
