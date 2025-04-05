@@ -93,7 +93,8 @@ export const users = pgTable(
     id: uuid("id").primaryKey().defaultRandom(), // Primary key with a random UUID
     clerkId: text("clerk_id").unique().notNull(), // Unique Clerk ID for authentication
     name: text("name").notNull(), // User's name
-    // TODO: Add banner fields (for future expansion)
+    bannerUrl: text("banner_url"), // Public URL of the user's banner image
+    bannerKey: text("banner_key"), // UploadThing file identifier for the stored banner image
     imageUrl: text("image_url").notNull(), // URL to user's profile image
     createdAt: timestamp("created_at").defaultNow().notNull(), // Auto-filled timestamp on creation
     updatedAt: timestamp("updated_at").defaultNow().notNull(), // Auto-filled timestamp on update

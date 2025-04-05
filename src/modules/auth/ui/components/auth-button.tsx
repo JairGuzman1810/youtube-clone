@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import { ClapperboardIcon, UserCircleIcon } from "lucide-react";
+import { ClapperboardIcon, UserCircleIcon, UserIcon } from "lucide-react";
 
 // Authentication button component - Handles user login/logout and profile actions
 export const AuthButton = () => {
@@ -12,6 +12,12 @@ export const AuthButton = () => {
         {/* When the user is signed in, display the profile button with menu options */}
         <UserButton>
           <UserButton.MenuItems>
+            {/* Link to the My profile page */}
+            <UserButton.Link
+              label="My profile"
+              href="/users/current"
+              labelIcon={<UserIcon className="size-4" />}
+            />
             {/* Link to the Studio page */}
             <UserButton.Link
               label="Studio"

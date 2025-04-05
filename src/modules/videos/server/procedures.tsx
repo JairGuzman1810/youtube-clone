@@ -213,6 +213,7 @@ export const videosRouter = createTRPCRouter({
     .input(
       z.object({
         categoryId: z.string().uuid().nullish(), // Category ID to filter videos by category (optional)
+        userId: z.string().uuid().nullish(), // User ID to filter videos by user (optional)
         cursor: z
           .object({
             id: z.string().uuid(), // Cursor ID (UUID format) for pagination
@@ -223,7 +224,7 @@ export const videosRouter = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      const { cursor, limit, categoryId } = input;
+      const { cursor, limit, categoryId, userId } = input;
 
       // Query database to fetch videos with optional search query and category filter
       const data = await db
@@ -252,6 +253,7 @@ export const videosRouter = createTRPCRouter({
           and(
             eq(videos.visibility, "public"), // Ensure the video is publicly visible
             categoryId ? eq(videos.categoryId, categoryId) : undefined, // Filter videos by category (if provided)
+            userId ? eq(videos.userId, userId) : undefined, // Filter videos by user (if provided)
             cursor
               ? or(
                   lt(videos.updatedAt, cursor.updatedAt), // Get videos with an older update timestamp

@@ -10,7 +10,7 @@ interface UseSubscriptionProps {
 }
 
 // useSubscriptions hook - Handles subscribing and unsubscribing logic
-export const useSubscriptions = ({
+export const useSubscription = ({
   userId,
   isSubscribed,
   fromVideoId,
@@ -25,6 +25,9 @@ export const useSubscriptions = ({
 
       // Invalidate the cache for subscribed videos to refresh the list after subscribing
       utils.videos.getManySubscribed.invalidate();
+
+      // Invalidate the user cache to ensure the user's data is updated after subscribing
+      utils.users.getOne.invalidate({ id: userId });
 
       if (fromVideoId) {
         utils.videos.getOne.invalidate({ id: fromVideoId }); // Invalidate video cache if triggered from a video
@@ -46,6 +49,9 @@ export const useSubscriptions = ({
 
       // Invalidate the cache for subscribed videos to refresh the list after unsubscribing
       utils.videos.getManySubscribed.invalidate();
+
+      // Invalidate the user cache to ensure the user's data is updated after unsubscribing
+      utils.users.getOne.invalidate({ id: userId });
 
       if (fromVideoId) {
         utils.videos.getOne.invalidate({ id: fromVideoId }); // Invalidate video cache if triggered from a video

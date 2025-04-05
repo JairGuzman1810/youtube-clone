@@ -2,11 +2,12 @@ import { CommentsSections } from "../sections/comments-section";
 import { SuggestionsSection } from "../sections/suggestion-section";
 import { VideoSection } from "../sections/video-section";
 
-// VideoView component - Displays the video player along with comments and suggestions
+// VideoViewProps - Defines the properties for the VideoView component
 interface VideoViewProps {
   videoId: string; // Unique identifier for the video being displayed
 }
 
+// VideoView - Displays the video player along with comments and suggestions
 export const VideoView = ({ videoId }: VideoViewProps) => {
   return (
     <div className="flex flex-col max-w-[1700px] mx-auto pt-2.5 px-4 mb-10">
