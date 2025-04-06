@@ -23,6 +23,9 @@ export const useSubscription = ({
     onSuccess: () => {
       toast.success("Subscribed"); // Show success message
 
+      // Invalidate the subscription list cache to refresh the sidebar after subscribing
+      utils.subscriptions.getMany.invalidate();
+
       // Invalidate the cache for subscribed videos to refresh the list after subscribing
       utils.videos.getManySubscribed.invalidate();
 
@@ -46,6 +49,9 @@ export const useSubscription = ({
   const unsubscribe = trpc.subscriptions.remove.useMutation({
     onSuccess: () => {
       toast.success("Unsubscribed"); // Show success message
+
+      // Invalidate the subscription list cache to refresh the sidebar after unsubscribing
+      utils.subscriptions.getMany.invalidate();
 
       // Invalidate the cache for subscribed videos to refresh the list after unsubscribing
       utils.videos.getManySubscribed.invalidate();
