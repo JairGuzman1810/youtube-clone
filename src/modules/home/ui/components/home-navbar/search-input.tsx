@@ -1,13 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { APP_URL } from "@/constants";
 import { SearchIcon, XIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
-// SearchInput component - Handles user search input functionality, redirects to search results page
+// SearchInput component - Wraps the search input with suspense for fallback loading
 export const SearchInput = () => {
+  return (
+    <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+      <SearchInputSuspense />
+    </Suspense>
+  );
+};
+
+// SearchInputSuspense component - Handles the search input logic and redirection
+export const SearchInputSuspense = () => {
   const router = useRouter(); // Router instance for programmatic navigation
   const searchParams = useSearchParams(); // Retrieves the current URL search parameters
 

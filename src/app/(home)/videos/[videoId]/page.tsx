@@ -2,6 +2,9 @@ import { DEFAULT_LIMIT } from "@/constants";
 import { VideoView } from "@/modules/videos/ui/views/video-view";
 import { HydrateClient, trpc } from "@/trpc/server";
 
+// Force dynamic rendering for this page (no static generation)
+export const dynamic = "force-dynamic";
+
 // Defines the expected structure of route parameters
 interface PageProps {
   params: Promise<{ videoId: string }>; // Contains the video ID extracted from the URL

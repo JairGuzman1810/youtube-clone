@@ -72,7 +72,6 @@ export const SubscriptionsSection = () => {
                     {/* Navigates to the subscribed user's profile */}
                     <Link
                       prefetch
-                      prefetch
                       href={`/users/${subscription.user.id}`}
                       className="flex items-center gap-4"
                     >
