@@ -72,6 +72,7 @@ export const SubscriptionsSection = () => {
                     {/* Navigates to the subscribed user's profile */}
                     <Link
                       prefetch
+                      prefetch
                       href={`/users/${subscription.user.id}`}
                       className="flex items-center gap-4"
                     >
@@ -95,7 +96,11 @@ export const SubscriptionsSection = () => {
                 isActive={pathname === "/subscriptions"} // Highlight if on the subscriptions page
               >
                 {/* Navigates to the subscriptions list page */}
-                <Link href="/subscriptions" className="flex items-center gap-4">
+                <Link
+                  prefetch
+                  href="/subscriptions"
+                  className="flex items-center gap-4"
+                >
                   <ListIcon className="size-4" />
                   <span>All subscriptions</span>
                 </Link>

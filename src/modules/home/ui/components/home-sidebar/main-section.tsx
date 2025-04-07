@@ -56,7 +56,11 @@ export const MainSection = () => {
                 }}
               >
                 {/* Navigates to the specified URL */}
-                <Link href={item.url} className="flex items-center gap-4">
+                <Link
+                  prefetch
+                  href={item.url}
+                  className="flex items-center gap-4"
+                >
                   {/* Render the icon */}
                   <item.icon />
                   {/* Render the title */}

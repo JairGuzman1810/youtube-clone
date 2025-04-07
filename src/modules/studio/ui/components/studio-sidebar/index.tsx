@@ -33,7 +33,7 @@ export const StudioSidebar = () => {
                 tooltip={"Content"} // Tooltip for accessibility
                 asChild
               >
-                <Link href={"/studio"}>
+                <Link prefetch href={"/studio"}>
                   <VideoIcon className="size-5" />
                   <span className="text-sm">Content</span>
                 </Link>
@@ -44,7 +44,7 @@ export const StudioSidebar = () => {
             {/* Exit studio button */}
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={"Exit studio"} asChild>
-                <Link href={"/"}>
+                <Link prefetch href={"/"}>
                   <LogOutIcon className="size-5" />
                   <span className="text-sm">Exit studio</span>
                 </Link>

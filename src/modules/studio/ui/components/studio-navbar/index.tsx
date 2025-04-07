@@ -14,7 +14,7 @@ export const StudioNavbar = () => {
         <div className="flex items-center flex-shrink-0">
           {/* Button to toggle sidebar */}
           <SidebarTrigger />
-          <Link href={"/studio"}>
+          <Link prefetch href={"/studio"} className="hidden md:block">
             <div className="p-4 flex items-center gap-1">
               <Image src={"/logo.svg"} width={50} height={50} alt="Logo" />
               <p className="text-xl font-semibold tracking-tight">Studio</p>

@@ -27,7 +27,7 @@ export const VideoOwner = ({ user, videoId }: VideoOwnerProps) => {
   return (
     <div className="flex items-center sm:items-start justify-between sm:justify-start gap-3 min-w-0">
       {/* Link to the user's profile */}
-      <Link href={`/users/${user.id}`}>
+      <Link prefetch href={`/users/${user.id}`}>
         <div className="flex items-center gap-3 min-w-0">
           <UserAvatar size={"lg"} imageUrl={user.imageUrl} name={user.name} />
           <div className="flex flex-col gap-1 min-w-0">
@@ -42,7 +42,9 @@ export const VideoOwner = ({ user, videoId }: VideoOwnerProps) => {
       {/* Show "Edit Video" button if the user owns the video, otherwise show subscription button */}
       {clerkUserId === user.clerkId ? (
         <Button variant={"secondary"} className="rounded-full">
-          <Link href={`/studio/videos/${videoId}`}>Edit video</Link>
+          <Link prefetch href={`/studio/videos/${videoId}`}>
+            Edit video
+          </Link>
         </Button>
       ) : (
         // SubscriptionButton - Allows the user to subscribe/unsubscribe from the video owner

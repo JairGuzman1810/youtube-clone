@@ -75,6 +75,7 @@ const SubscriptionsSectionSuspense = () => {
           .flatMap((page) => page.items) // Flattens paginated results into a single array
           .map((subscription) => (
             <Link
+              prefetch
               key={subscription.creatorId}
               href={`/users/${subscription.user.id}`}
             >

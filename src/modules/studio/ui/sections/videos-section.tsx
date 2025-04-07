@@ -122,6 +122,7 @@ const VideosSectionsSuspense = () => {
               .flatMap((page) => page.items) // Flattens paginated results into a single array
               .map((video) => (
                 <Link
+                  prefetch
                   href={`/studio/videos/${video.id}`} // Links to the specific video page
                   key={video.id}
                   legacyBehavior // Ensures backward compatibility with older Next.js versions
